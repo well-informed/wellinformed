@@ -1,0 +1,49 @@
+scalar Time
+
+type SrcRSSFeed {
+  id: ID!
+  title: String!
+  link: String!
+  FeedLink: String!
+  Updated: Time!
+}
+
+type ContentItem {
+  id: ID!
+  sourceID: String!
+  sourceTitle: String!
+  sourceLink: String!
+  title: String!
+  description: String!
+  content: String!
+  link: String!
+  updated: Time
+  published: Time
+  imageTitle: String
+  imageURL: String
+  sourceType: String!
+}
+
+type UserFeed {
+  userID: String!
+  name: String!
+  contentItems: [ContentItem!]!
+}
+
+type User {
+  id: ID!
+  firstname: String!
+  lastname: String!
+  username: String!
+  email: String!
+  password: String!
+  feed: UserFeed!
+}
+
+type Query {
+  userFeed(input: ID!): UserFeed!
+}
+
+type Mutation {
+  addSrcRSSFeed(input: String!): SrcRSSFeed!
+}
