@@ -64,9 +64,10 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (int64, error) {
 		link,
 		feed_link,
 		updated,
+		last_fetched_at,
 		language,
 		generator)
-		values($1,$2,$3,$4,$5,$6,$7)
+		values($1,$2,$3,$4,$5,$6,$7,$8)
 		RETURNING id
 		`)
 	if err != nil {
@@ -81,6 +82,7 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (int64, error) {
 		feed.Link,
 		feed.FeedLink,
 		feed.Updated,
+		feed.LastFetchedAt,
 		feed.Language,
 		feed.Generator).Scan(&id)
 	if err != nil {
