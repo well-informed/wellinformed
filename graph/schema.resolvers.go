@@ -5,17 +5,39 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, input string) (*model.SrcRSSFeed, error) {
-	panic(fmt.Errorf("not implemented"))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	feed, err := r.RSS.FetchSrcFeed(input, ctx)
+	if err != nil {
+		log.Errorf("couldn't fetch SrcFeed in order to add it.")
+		return nil, err
+	}
+	id, err := r.DB.InsertSrcRSSFeed(feed)
+	if err != nil {
+		return nil, err
+	}
+	feed.ID = id
+
+	json, err := json.Marshal(feed)
+	if err != nil {
+		log.Error("feed object can't be json marshalled", err)
+	}
+	log.Info("manual json: ", string(json))
+	log.Infof("feed object to return: %+v", feed)
+	return &feed, nil
 }
 
-func (r *queryResolver) UserFeed(ctx context.Context, input string) (*model.UserFeed, error) {
+func (r *queryResolver) UserFeed(ctx context.Context, input int64) (*model.UserFeed, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 

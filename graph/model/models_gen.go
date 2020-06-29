@@ -7,7 +7,7 @@ import (
 )
 
 type ContentItem struct {
-	ID          string     `json:"id"`
+	ID          int64      `json:"id"`
 	SourceID    string     `json:"sourceID"`
 	SourceTitle string     `json:"sourceTitle"`
 	SourceLink  string     `json:"sourceLink"`
@@ -23,15 +23,19 @@ type ContentItem struct {
 }
 
 type SrcRSSFeed struct {
-	ID       string    `json:"id"`
-	Title    string    `json:"title"`
-	Link     string    `json:"link"`
-	FeedLink string    `json:"FeedLink"`
-	Updated  time.Time `json:"Updated"`
+	ID            int64     `json:"id"`
+	Title         string    `json:"title"`
+	Description   *string   `json:"description"`
+	Link          string    `json:"link"`
+	FeedLink      string    `json:"FeedLink"`
+	Updated       time.Time `json:"Updated"`
+	LastFetchedAt time.Time `json:"LastFetchedAt"`
+	Language      *string   `json:"language"`
+	Generator     *string   `json:"generator"`
 }
 
 type User struct {
-	ID        string    `json:"id"`
+	ID        int64     `json:"id"`
 	Firstname string    `json:"firstname"`
 	Lastname  string    `json:"lastname"`
 	Username  string    `json:"username"`

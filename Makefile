@@ -2,8 +2,7 @@ up:
 	docker-compose up -d
 
 run:
-	go install
-	rss
+	go run server/server.go
 
 #destroys db
 down:

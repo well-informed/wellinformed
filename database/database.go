@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 
+	_ "github.com/lib/pq"
 	"github.com/mmcdole/gofeed"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
@@ -32,23 +33,23 @@ func NewDB() DB {
 or exits the program with call to log.Fatal()*/
 func createTables(db *sql.DB) {
 	createSrcRSSFeedsTable(db)
-	createMainFeedTable(db)
-	createUsersTable(db)
-	createUserHistoryTable(db)
+	// createMainFeedTable(db)
+	// createUsersTable(db)
+	// createUserHistoryTable(db)
 }
 
 func createSrcRSSFeedsTable(db *sql.DB) {
 	stmt := `
 	CREATE TABLE IF NOT EXISTS src_rss_feeds
-	(	title varchar NOT NULL,
+	(	id BIGSERIAL PRIMARY KEY,
+		title varchar NOT NULL,
 		description varchar,
-		link varchar NOT NULL,
-		feed_link varchar NOT NULL ,
+		link varchar UNIQUE NOT NULL,
+		feed_link varchar UNIQUE NOT NULL ,
 		updated timestamp with time zone,
-		published timestamp with time zone,
+		last_fetched_at timestamp with time zone,
 		language varchar,
-		generator varchar,
-		PRIMARY KEY (link)
+		generator varchar
 	)`
 	_, err := db.Exec(stmt)
 	if err != nil {
@@ -56,37 +57,38 @@ func createSrcRSSFeedsTable(db *sql.DB) {
 	}
 }
 
-func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) error {
+func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (int64, error) {
 	stmt, err := db.Prepare(`INSERT INTO src_rss_feeds
 	( title,
 		description,
 		link,
 		feed_link,
 		updated,
-		published,
 		language,
 		generator)
-		values($1,$2,$3,$4,$5,$6,$7,$8)
+		values($1,$2,$3,$4,$5,$6,$7)
+		RETURNING id
 		`)
 	if err != nil {
-		log.Error("failed to prepare rss_feeds insert: ", err)
-		return err
+		log.Error("failed to prepare src_rss_feeds insert: ", err)
+		return 0, err
 	}
-	//Todo: Write this correctly in regards to model
-	// _, err = stmt.Exec(
-	// 	feed.Title,
-	// 	feed.Description,
-	// 	feed.Link,
-	// 	feed.FeedLink,
-	// 	feed.UpdatedParsed,
-	// 	feed.PublishedParsed,
-	// 	feed.Language,
-	// 	feed.Generator)
-	// if err != nil {
-	// 	log.Errorf("failed to exec rss_feeds insert: ", err)
-	// 	return err
-	// }
-	return nil
+	// Todo: Write this correctly in regards to model
+	var id int64
+	err = stmt.QueryRow(
+		feed.Title,
+		feed.Description,
+		feed.Link,
+		feed.FeedLink,
+		feed.Updated,
+		feed.Language,
+		feed.Generator).Scan(&id)
+	if err != nil {
+		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
+		return 0, err
+	}
+	log.Info("got id back: ", id)
+	return id, nil
 }
 
 func createMainFeedTable(db *sql.DB) {

@@ -3,9 +3,13 @@ scalar Time
 type SrcRSSFeed {
   id: ID!
   title: String!
+  description: String
   link: String!
   FeedLink: String!
   Updated: Time!
+  LastFetchedAt: Time!
+  language: String
+  generator: String
 }
 
 type ContentItem {

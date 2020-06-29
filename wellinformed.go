@@ -1,7 +1,15 @@
 package wellinformed
 
-import "github.com/well-informed/wellinformed/graph/model"
+import (
+	"context"
+
+	"github.com/well-informed/wellinformed/graph/model"
+)
 
 type Persistor interface {
-	InsertSrcRSSFeed(model.SrcRSSFeed) error
+	InsertSrcRSSFeed(model.SrcRSSFeed) (int64, error)
+}
+
+type RSS interface {
+	FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSSFeed, error)
 }

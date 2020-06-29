@@ -10,6 +10,7 @@ import (
 	"github.com/well-informed/wellinformed/database"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
+	"github.com/well-informed/wellinformed/rss"
 )
 
 const defaultPort = "8080"
@@ -21,7 +22,8 @@ func main() {
 	}
 
 	resolver := &graph.Resolver{
-		DB: database.NewDB(),
+		DB:  database.NewDB(),
+		RSS: rss.NewRSS(),
 	}
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 
