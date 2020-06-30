@@ -8,7 +8,10 @@ run:
 down:
 	docker-compose down
 
-restart: down up
+restart: down up wait run
+
+wait:
+	sleep 1
 
 gql:
 	gqlgen generate

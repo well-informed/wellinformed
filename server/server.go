@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/database"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
@@ -16,6 +16,8 @@ import (
 const defaultPort = "8080"
 
 func main() {
+	log.SetLevel(log.DebugLevel)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort

@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 
 	_ "github.com/lib/pq"
 	"github.com/mmcdole/gofeed"
@@ -57,7 +58,7 @@ func createSrcRSSFeedsTable(db *sql.DB) {
 	}
 }
 
-func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (int64, error) {
+func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
 	stmt, err := db.Prepare(`INSERT INTO src_rss_feeds
 	( title,
 		description,
@@ -72,9 +73,9 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (int64, error) {
 		`)
 	if err != nil {
 		log.Error("failed to prepare src_rss_feeds insert: ", err)
-		return 0, err
+		return feed, err
 	}
-	// Todo: Write this correctly in regards to model
+
 	var id int64
 	err = stmt.QueryRow(
 		feed.Title,
@@ -84,13 +85,47 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (int64, error) {
 		feed.Updated,
 		feed.LastFetchedAt,
 		feed.Language,
-		feed.Generator).Scan(&id)
+		feed.Generator,
+	).Scan(&id)
 	if err != nil {
 		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
-		return 0, err
+		return feed, err
 	}
+	feed.ID = id
 	log.Info("got id back: ", id)
-	return id, nil
+	return feed, nil
+}
+
+func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (model.SrcRSSFeed, error) {
+	var feed model.SrcRSSFeed
+	var whereClause string
+	var arg interface{}
+
+	if input.ID != nil {
+		whereClause = `WHERE id = $1`
+		arg = *input.ID
+	} else if input.Link != nil {
+		whereClause = `WHERE link = $1`
+		arg = *input.Link
+	} else if input.FeedLink != nil {
+		whereClause = `WHERE feed_link = $1`
+		arg = *input.FeedLink
+	} else {
+		return feed, errors.New("no key for select found")
+	}
+	stmt := `SELECT * FROM src_rss_feeds ` + whereClause
+	err := db.QueryRow(stmt, arg).Scan(
+		&feed.ID,
+		&feed.Title,
+		&feed.Description,
+		&feed.Link,
+		&feed.FeedLink,
+		&feed.Updated,
+		&feed.LastFetchedAt,
+		&feed.Language,
+		&feed.Generator)
+	log.Debugf("Selected feed with whereClause %v with key %v: %v", whereClause, arg, feed)
+	return feed, err
 }
 
 func createMainFeedTable(db *sql.DB) {

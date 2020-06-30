@@ -5,9 +5,9 @@ type SrcRSSFeed {
   title: String!
   description: String
   link: String!
-  FeedLink: String!
-  Updated: Time!
-  LastFetchedAt: Time!
+  feedLink: String!
+  updated: Time!
+  lastFetchedAt: Time!
   language: String
   generator: String
 }
@@ -44,10 +44,17 @@ type User {
   feed: UserFeed!
 }
 
+input SrcRSSFeedInput {
+  id: ID
+  link: String
+  feedLink: String
+}
+
 type Query {
+  srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed(input: ID!): UserFeed!
 }
 
 type Mutation {
-  addSrcRSSFeed(input: String!): SrcRSSFeed!
+  addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
 }

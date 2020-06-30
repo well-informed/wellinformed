@@ -7,7 +7,8 @@ import (
 )
 
 type Persistor interface {
-	InsertSrcRSSFeed(model.SrcRSSFeed) (int64, error)
+	InsertSrcRSSFeed(model.SrcRSSFeed) (model.SrcRSSFeed, error)
+	SelectSrcRSSFeed(model.SrcRSSFeedInput) (model.SrcRSSFeed, error)
 }
 
 type RSS interface {

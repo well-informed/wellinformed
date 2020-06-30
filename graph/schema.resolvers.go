@@ -5,7 +5,7 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -14,26 +14,45 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
-func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, input string) (*model.SrcRSSFeed, error) {
+func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	feed, err := r.RSS.FetchSrcFeed(input, ctx)
+
+	feed, err := r.DB.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	if feed != (model.SrcRSSFeed{}) {
+		return &feed, nil
+	}
+	feed, err = r.RSS.FetchSrcFeed(feedLink, ctx)
 	if err != nil {
 		log.Errorf("couldn't fetch SrcFeed in order to add it.")
 		return nil, err
 	}
-	id, err := r.DB.InsertSrcRSSFeed(feed)
+	feed, err = r.DB.InsertSrcRSSFeed(feed)
 	if err != nil {
 		return nil, err
 	}
-	feed.ID = id
 
-	json, err := json.Marshal(feed)
+	// json, err := json.Marshal(feed)
+	// if err != nil {
+	// 	log.Error("feed object can't be json marshalled", err)
+	// }
+	// log.Info("manual json: ", string(json))
+	// log.Infof("feed object to return: %+v", feed)
+	return &feed, nil
+}
+
+func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	feed, err := r.DB.SelectSrcRSSFeed(*input)
+	log.Debug("after db select")
 	if err != nil {
-		log.Error("feed object can't be json marshalled", err)
+		return nil, err
 	}
-	log.Info("manual json: ", string(json))
-	log.Infof("feed object to return: %+v", feed)
 	return &feed, nil
 }
 

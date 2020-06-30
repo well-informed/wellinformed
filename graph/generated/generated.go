@@ -61,11 +61,12 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddSrcRSSFeed func(childComplexity int, input string) int
+		AddSrcRSSFeed func(childComplexity int, feedLink string) int
 	}
 
 	Query struct {
-		UserFeed func(childComplexity int, input int64) int
+		SrcRSSFeed func(childComplexity int, input *model.SrcRSSFeedInput) int
+		UserFeed   func(childComplexity int, input int64) int
 	}
 
 	SrcRSSFeed struct {
@@ -98,9 +99,10 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	AddSrcRSSFeed(ctx context.Context, input string) (*model.SrcRSSFeed, error)
+	AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
 }
 type QueryResolver interface {
+	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context, input int64) (*model.UserFeed, error)
 }
 
@@ -220,7 +222,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddSrcRSSFeed(childComplexity, args["input"].(string)), true
+		return e.complexity.Mutation.AddSrcRSSFeed(childComplexity, args["feedLink"].(string)), true
+
+	case "Query.srcRSSFeed":
+		if e.complexity.Query.SrcRSSFeed == nil {
+			break
+		}
+
+		args, err := ec.field_Query_srcRSSFeed_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.SrcRSSFeed(childComplexity, args["input"].(*model.SrcRSSFeedInput)), true
 
 	case "Query.userFeed":
 		if e.complexity.Query.UserFeed == nil {
@@ -241,7 +255,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SrcRSSFeed.Description(childComplexity), true
 
-	case "SrcRSSFeed.FeedLink":
+	case "SrcRSSFeed.feedLink":
 		if e.complexity.SrcRSSFeed.FeedLink == nil {
 			break
 		}
@@ -269,7 +283,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SrcRSSFeed.Language(childComplexity), true
 
-	case "SrcRSSFeed.LastFetchedAt":
+	case "SrcRSSFeed.lastFetchedAt":
 		if e.complexity.SrcRSSFeed.LastFetchedAt == nil {
 			break
 		}
@@ -290,7 +304,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SrcRSSFeed.Title(childComplexity), true
 
-	case "SrcRSSFeed.Updated":
+	case "SrcRSSFeed.updated":
 		if e.complexity.SrcRSSFeed.Updated == nil {
 			break
 		}
@@ -438,9 +452,9 @@ type SrcRSSFeed {
   title: String!
   description: String
   link: String!
-  FeedLink: String!
-  Updated: Time!
-  LastFetchedAt: Time!
+  feedLink: String!
+  updated: Time!
+  lastFetchedAt: Time!
   language: String
   generator: String
 }
@@ -477,12 +491,19 @@ type User {
   feed: UserFeed!
 }
 
+input SrcRSSFeedInput {
+  id: ID
+  link: String
+  feedLink: String
+}
+
 type Query {
+  srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed(input: ID!): UserFeed!
 }
 
 type Mutation {
-  addSrcRSSFeed(input: String!): SrcRSSFeed!
+  addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -495,13 +516,13 @@ func (ec *executionContext) field_Mutation_addSrcRSSFeed_args(ctx context.Contex
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["input"]; ok {
+	if tmp, ok := rawArgs["feedLink"]; ok {
 		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["feedLink"] = arg0
 	return args, nil
 }
 
@@ -516,6 +537,20 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_srcRSSFeed_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.SrcRSSFeedInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOSrcRSSFeedInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -1023,7 +1058,48 @@ func (ec *executionContext) _Mutation_addSrcRSSFeed(ctx context.Context, field g
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddSrcRSSFeed(rctx, args["input"].(string))
+		return ec.resolvers.Mutation().AddSrcRSSFeed(rctx, args["feedLink"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.SrcRSSFeed)
+	fc.Result = res
+	return ec.marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_srcRSSFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_srcRSSFeed_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().SrcRSSFeed(rctx, args["input"].(*model.SrcRSSFeedInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1283,7 +1359,7 @@ func (ec *executionContext) _SrcRSSFeed_link(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SrcRSSFeed_FeedLink(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
+func (ec *executionContext) _SrcRSSFeed_feedLink(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1317,7 +1393,7 @@ func (ec *executionContext) _SrcRSSFeed_FeedLink(ctx context.Context, field grap
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SrcRSSFeed_Updated(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
+func (ec *executionContext) _SrcRSSFeed_updated(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1351,7 +1427,7 @@ func (ec *executionContext) _SrcRSSFeed_Updated(ctx context.Context, field graph
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SrcRSSFeed_LastFetchedAt(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
+func (ec *executionContext) _SrcRSSFeed_lastFetchedAt(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2842,6 +2918,36 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputSrcRSSFeedInput(ctx context.Context, obj interface{}) (model.SrcRSSFeedInput, error) {
+	var it model.SrcRSSFeedInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "id":
+			var err error
+			it.ID, err = ec.unmarshalOID2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "link":
+			var err error
+			it.Link, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "feedLink":
+			var err error
+			it.FeedLink, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -2971,6 +3077,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "srcRSSFeed":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_srcRSSFeed(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "userFeed":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -3028,18 +3148,18 @@ func (ec *executionContext) _SrcRSSFeed(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "FeedLink":
-			out.Values[i] = ec._SrcRSSFeed_FeedLink(ctx, field, obj)
+		case "feedLink":
+			out.Values[i] = ec._SrcRSSFeed_feedLink(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "Updated":
-			out.Values[i] = ec._SrcRSSFeed_Updated(ctx, field, obj)
+		case "updated":
+			out.Values[i] = ec._SrcRSSFeed_updated(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "LastFetchedAt":
-			out.Values[i] = ec._SrcRSSFeed_LastFetchedAt(ctx, field, obj)
+		case "lastFetchedAt":
+			out.Values[i] = ec._SrcRSSFeed_lastFetchedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -3779,6 +3899,41 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return ec.marshalOBoolean2bool(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOID2int64(ctx context.Context, v interface{}) (int64, error) {
+	return graphql.UnmarshalInt64(v)
+}
+
+func (ec *executionContext) marshalOID2int64(ctx context.Context, sel ast.SelectionSet, v int64) graphql.Marshaler {
+	return graphql.MarshalInt64(v)
+}
+
+func (ec *executionContext) unmarshalOID2ᚖint64(ctx context.Context, v interface{}) (*int64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOID2int64(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOID2ᚖint64(ctx context.Context, sel ast.SelectionSet, v *int64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec.marshalOID2int64(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOSrcRSSFeedInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedInput(ctx context.Context, v interface{}) (model.SrcRSSFeedInput, error) {
+	return ec.unmarshalInputSrcRSSFeedInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOSrcRSSFeedInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedInput(ctx context.Context, v interface{}) (*model.SrcRSSFeedInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOSrcRSSFeedInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedInput(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

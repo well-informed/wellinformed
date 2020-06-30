@@ -27,11 +27,17 @@ type SrcRSSFeed struct {
 	Title         string    `json:"title"`
 	Description   *string   `json:"description"`
 	Link          string    `json:"link"`
-	FeedLink      string    `json:"FeedLink"`
-	Updated       time.Time `json:"Updated"`
-	LastFetchedAt time.Time `json:"LastFetchedAt"`
+	FeedLink      string    `json:"feedLink"`
+	Updated       time.Time `json:"updated"`
+	LastFetchedAt time.Time `json:"lastFetchedAt"`
 	Language      *string   `json:"language"`
 	Generator     *string   `json:"generator"`
+}
+
+type SrcRSSFeedInput struct {
+	ID       *int64  `json:"id"`
+	Link     *string `json:"link"`
+	FeedLink *string `json:"feedLink"`
 }
 
 type User struct {
