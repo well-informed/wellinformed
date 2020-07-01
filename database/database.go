@@ -3,6 +3,8 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	_ "github.com/lib/pq"
 	"github.com/mmcdole/gofeed"
@@ -35,7 +37,7 @@ or exits the program with call to log.Fatal()*/
 func createTables(db *sql.DB) {
 	createSrcRSSFeedsTable(db)
 	// createMainFeedTable(db)
-	// createUsersTable(db)
+	createUsersTable(db)
 	// createUserHistoryTable(db)
 }
 
@@ -94,6 +96,58 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
 	feed.ID = id
 	log.Info("got id back: ", id)
 	return feed, nil
+}
+
+func (db DB) GetUserByField(field string, value string) (model.User, error) {
+	var user model.User
+
+	s := []string{"SELECT * FROM users WHERE", field, "= $1"}
+	stmt := strings.Join(s, " ")
+
+	fmt.Println(stmt)
+
+	err := db.QueryRow(stmt, value).Scan(
+		&user.ID,
+		&user.Firstname,
+		&user.Lastname,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+	)
+
+	return user, err
+}
+
+func (db DB) CreateUser(user model.User) (model.User, error) {
+	stmt, err := db.Prepare(`INSERT INTO users
+	( email,
+		first_name,
+		last_name,
+		user_name,
+		password)
+		values($1,$2,$3,$4,$5)
+		RETURNING id
+		`)
+	if err != nil {
+		log.Error("failed to prepare user insert: ", err)
+		return user, err
+	}
+
+	var ID int64
+	err = stmt.QueryRow(
+		user.Email,
+		user.Firstname,
+		user.Lastname,
+		user.Username,
+		user.Password,
+	).Scan(&ID)
+	if err != nil {
+		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
+		return user, err
+	}
+	user.ID = ID
+	log.Info("got id back: ", ID)
+	return user, nil
 }
 
 func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (model.SrcRSSFeed, error) {
@@ -186,7 +240,8 @@ func insertItem(db *sql.DB, feedLink string, article *gofeed.Item) error {
 func createUsersTable(db *sql.DB) {
 	stmt := `
 	CREATE TABLE IF NOT EXISTS users
-	( userID varchar NOT NULL PRIMARY KEY,
+	( id BIGSERIAL PRIMARY KEY,
+		email varchar,
 		first_name varchar,
 		last_name varchar,
 		user_name varchar,

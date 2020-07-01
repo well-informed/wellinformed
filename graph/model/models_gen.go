@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+type AuthResponse struct {
+	AuthToken *AuthToken `json:"authToken"`
+	User      *User      `json:"user"`
+}
+
+type AuthToken struct {
+	AccessToken string    `json:"accessToken"`
+	ExpiredAt   time.Time `json:"expiredAt"`
+}
+
 type ContentItem struct {
 	ID          int64      `json:"id"`
 	SourceID    string     `json:"sourceID"`
@@ -20,6 +30,15 @@ type ContentItem struct {
 	ImageTitle  *string    `json:"imageTitle"`
 	ImageURL    *string    `json:"imageURL"`
 	SourceType  string     `json:"sourceType"`
+}
+
+type RegisterInput struct {
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirmPassword"`
+	Firstname       string `json:"firstname"`
+	Lastname        string `json:"lastname"`
 }
 
 type SrcRSSFeed struct {

@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -42,6 +43,52 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	// log.Info("manual json: ", string(json))
 	// log.Infof("feed object to return: %+v", feed)
 	return &feed, nil
+}
+
+func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
+	// TODO: add validation on input
+
+	_, err := r.DB.GetUserByField("email", input.Email)
+
+	if err == nil {
+		log.Printf("error while GetUserByField: %v", err)
+		return nil, errors.New("email already in used")
+	}
+
+	_, err = r.DB.GetUserByField("username", input.Username)
+
+	if err == nil {
+		return nil, errors.New("username already in used")
+	}
+
+	user := &model.User{
+		Username:  input.Username,
+		Email:     input.Email,
+		Firstname: input.Firstname,
+		Lastname:  input.Lastname,
+	}
+
+	err = user.HashPassword(input.Password)
+	if err != nil {
+		log.Printf("error while hashing password: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	if _, err := r.DB.CreateUser(*user); err != nil {
+		log.Printf("error creating a user: %v", err)
+		return nil, err
+	}
+
+	token, err := user.GenToken()
+	if err != nil {
+		log.Printf("error while generating the token: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	return &model.AuthResponse{
+		AuthToken: token,
+		User:      user,
+	}, nil
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {

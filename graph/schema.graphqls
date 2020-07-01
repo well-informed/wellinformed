@@ -1,5 +1,15 @@
 scalar Time
 
+type AuthToken {
+  accessToken: String!
+  expiredAt: Time!
+}
+
+type AuthResponse {
+  authToken: AuthToken!
+  user: User!
+}
+
 type SrcRSSFeed {
   id: ID!
   title: String!
@@ -50,6 +60,15 @@ input SrcRSSFeedInput {
   feedLink: String
 }
 
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+  confirmPassword: String!
+  firstname: String!
+  lastname: String!
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed(input: ID!): UserFeed!
@@ -57,4 +76,5 @@ type Query {
 
 type Mutation {
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
+  register(input: RegisterInput!): AuthResponse!
 }
