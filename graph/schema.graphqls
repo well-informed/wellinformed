@@ -10,11 +10,12 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
+  contentItems: [ContentItem!]!
 }
 
 type ContentItem {
   id: ID!
-  sourceID: String!
+  sourceID: ID!
   sourceTitle: String!
   sourceLink: String!
   title: String!
@@ -23,6 +24,8 @@ type ContentItem {
   link: String!
   updated: Time
   published: Time
+  author: String
+  guid: String
   imageTitle: String
   imageURL: String
   sourceType: String!

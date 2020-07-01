@@ -8,7 +8,7 @@ import (
 
 type ContentItem struct {
 	ID          int64      `json:"id"`
-	SourceID    string     `json:"sourceID"`
+	SourceID    int64      `json:"sourceID"`
 	SourceTitle string     `json:"sourceTitle"`
 	SourceLink  string     `json:"sourceLink"`
 	Title       string     `json:"title"`
@@ -17,21 +17,24 @@ type ContentItem struct {
 	Link        string     `json:"link"`
 	Updated     *time.Time `json:"updated"`
 	Published   *time.Time `json:"published"`
+	Author      *string    `json:"author"`
+	GUID        *string    `json:"guid"`
 	ImageTitle  *string    `json:"imageTitle"`
 	ImageURL    *string    `json:"imageURL"`
 	SourceType  string     `json:"sourceType"`
 }
 
 type SrcRSSFeed struct {
-	ID            int64     `json:"id"`
-	Title         string    `json:"title"`
-	Description   *string   `json:"description"`
-	Link          string    `json:"link"`
-	FeedLink      string    `json:"feedLink"`
-	Updated       time.Time `json:"updated"`
-	LastFetchedAt time.Time `json:"lastFetchedAt"`
-	Language      *string   `json:"language"`
-	Generator     *string   `json:"generator"`
+	ID            int64          `json:"id"`
+	Title         string         `json:"title"`
+	Description   *string        `json:"description"`
+	Link          string         `json:"link"`
+	FeedLink      string         `json:"feedLink"`
+	Updated       time.Time      `json:"updated"`
+	LastFetchedAt time.Time      `json:"lastFetchedAt"`
+	Language      *string        `json:"language"`
+	Generator     *string        `json:"generator"`
+	ContentItems  []*ContentItem `json:"contentItems"`
 }
 
 type SrcRSSFeedInput struct {

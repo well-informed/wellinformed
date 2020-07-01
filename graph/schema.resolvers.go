@@ -5,7 +5,6 @@ package graph
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -18,19 +17,21 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	feed, err := r.DB.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
-	if err != nil && err != sql.ErrNoRows {
+	existingFeed, err := r.DB.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
+	if err != nil {
 		return nil, err
 	}
-	if feed != (model.SrcRSSFeed{}) {
-		return &feed, nil
+	log.Debug("existingFeed: ", existingFeed)
+	if existingFeed != nil {
+		return existingFeed, nil
 	}
-	feed, err = r.RSS.FetchSrcFeed(feedLink, ctx)
+	log.Debug("passed select, fetching feed")
+	feed, err := r.RSS.FetchSrcFeed(feedLink, ctx)
 	if err != nil {
 		log.Errorf("couldn't fetch SrcFeed in order to add it.")
 		return nil, err
 	}
-	feed, err = r.DB.InsertSrcRSSFeed(feed)
+	insertedFeed, err := r.DB.InsertSrcRSSFeed(feed)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +42,7 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	// }
 	// log.Info("manual json: ", string(json))
 	// log.Infof("feed object to return: %+v", feed)
-	return &feed, nil
+	return insertedFeed, nil
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -53,7 +54,7 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	if err != nil {
 		return nil, err
 	}
-	return &feed, nil
+	return feed, nil
 }
 
 func (r *queryResolver) UserFeed(ctx context.Context, input int64) (*model.UserFeed, error) {
@@ -68,3 +69,10 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.

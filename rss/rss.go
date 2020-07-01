@@ -27,7 +27,13 @@ func (rss *RSS) FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSS
 	}
 
 	convertedFeed := convertToModelFeed(feed)
+
 	return *convertedFeed, nil
+}
+
+func (rss *RSS) WatchSrcFeed(feedLink string) error {
+	log.Panic("not implemented")
+	return nil
 }
 
 func convertToModelFeed(feed *gofeed.Feed) *model.SrcRSSFeed {
@@ -40,5 +46,33 @@ func convertToModelFeed(feed *gofeed.Feed) *model.SrcRSSFeed {
 		LastFetchedAt: time.Now(),
 		Language:      &feed.Language,
 		Generator:     &feed.Generator,
+	}
+}
+
+func convertToModelContentItem(item *gofeed.Item, feed *model.SrcRSSFeed) *model.ContentItem {
+	var author *string
+	if item.Author != nil {
+		author = &item.Author.Name
+	}
+	var imageTitle *string
+	var imageURL *string
+	if item.Image != nil {
+		imageTitle = &item.Image.Title
+		imageURL = &item.Image.URL
+	}
+	return &model.ContentItem{
+		SourceID:    feed.ID,
+		SourceTitle: feed.Title,
+		SourceLink:  feed.Link,
+		Title:       item.Title,
+		Description: item.Description,
+		Content:     item.Content,
+		Link:        item.Link,
+		Updated:     item.UpdatedParsed,
+		Published:   item.PublishedParsed,
+		Author:      author,
+		GUID:        &item.GUID,
+		ImageTitle:  imageTitle,
+		ImageURL:    imageURL,
 	}
 }

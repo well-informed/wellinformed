@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	_ "github.com/lib/pq"
-	"github.com/mmcdole/gofeed"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
 )
@@ -42,7 +41,7 @@ func createTables(db *sql.DB) {
 func createSrcRSSFeedsTable(db *sql.DB) {
 	stmt := `
 	CREATE TABLE IF NOT EXISTS src_rss_feeds
-	(	id BIGSERIAL PRIMARY KEY,
+	(	id SERIAL PRIMARY KEY,
 		title varchar NOT NULL,
 		description varchar,
 		link varchar UNIQUE NOT NULL,
@@ -58,7 +57,7 @@ func createSrcRSSFeedsTable(db *sql.DB) {
 	}
 }
 
-func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
+func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) {
 	stmt, err := db.Prepare(`INSERT INTO src_rss_feeds
 	( title,
 		description,
@@ -73,7 +72,7 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
 		`)
 	if err != nil {
 		log.Error("failed to prepare src_rss_feeds insert: ", err)
-		return feed, err
+		return nil, err
 	}
 
 	var id int64
@@ -89,14 +88,14 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
 	).Scan(&id)
 	if err != nil {
 		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
-		return feed, err
+		return nil, err
 	}
 	feed.ID = id
 	log.Info("got id back: ", id)
-	return feed, nil
+	return &feed, nil
 }
 
-func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (model.SrcRSSFeed, error) {
+func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
 	var feed model.SrcRSSFeed
 	var whereClause string
 	var arg interface{}
@@ -111,7 +110,7 @@ func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (model.SrcRSSFeed, er
 		whereClause = `WHERE feed_link = $1`
 		arg = *input.FeedLink
 	} else {
-		return feed, errors.New("no key for select found")
+		return nil, errors.New("no key for select found")
 	}
 	stmt := `SELECT * FROM src_rss_feeds ` + whereClause
 	err := db.QueryRow(stmt, arg).Scan(
@@ -124,63 +123,76 @@ func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (model.SrcRSSFeed, er
 		&feed.LastFetchedAt,
 		&feed.Language,
 		&feed.Generator)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	log.Debugf("Selected feed with whereClause %v with key %v: %v", whereClause, arg, feed)
-	return feed, err
+	return &feed, err
 }
 
-func createMainFeedTable(db *sql.DB) {
+func createContentItemsTable(db *sql.DB) {
 	stmt := `
-	CREATE TABLE IF NOT EXISTS main_feed
- ( title varchar,
+	CREATE TABLE IF NOT EXISTS content_items
+ ( id BIGSERIAL PRIMARY KEY,
+	 source_id int NOT NULL REFERENCES src_rss_feeds(id),
+	 source_title NOT NULL,
+	 source_link NOT NULL,
+	 title varchar NOT NULL,
 	 description varchar,
 	 content varchar,
-	 link varchar,
+	 link varchar NOT NULL,
 	 updated timestamp with time zone,
 	 published timestamp with time zone,
 	 author varchar,
-	 parent_feed varchar NOT NULL,
 	 guid varchar NOT NULL,
-	 FOREIGN KEY (parent_feed) REFERENCES src_rss_feeds(link),
-	 PRIMARY KEY (parent_feed,guid)
+	 image_title varchar,
+	 image_url varchar
  )`
 	_, err := db.Exec(stmt)
 	if err != nil {
-		log.Fatal("error creating rss_articles table. err: ", err)
+		log.Fatal("error creating content_items table. err: ", err)
 	}
 }
 
-func insertItem(db *sql.DB, feedLink string, article *gofeed.Item) error {
-	stmt, err := db.Prepare(`INSERT INTO main_feed
-	(title,
-	description,
-	htmlContent,
-	link,
-	updated,
-	published,
-	author,
-	guid,
-	parent_feed)
-	values($1,$2,$3,$4,$5,$6,$7,$8,$9)`)
-	if err != nil {
-		log.Error("failed to prepare rss_articles insert", err)
-		return err
-	}
+func (db DB) InsertContentItem(model.ContentItem) (*model.ContentItem, error) {
+	// stmt, err := db.Prepare(`INSERT INTO main_feed
+	// (title,
+	// description,
+	// htmlContent,
+	// link,
+	// updated,
+	// published,
+	// author,
+	// guid,
+	// parent_feed)
+	// values($1,$2,$3,$4,$5,$6,$7,$8,$9)`)
+	// if err != nil {
+	// 	log.Error("failed to prepare rss_articles insert", err)
+	// 	return err
+	// }
 
-	_, err = stmt.Exec(
-		article.Title,
-		article.Description,
-		article.Content,
-		article.Link,
-		article.UpdatedParsed,
-		article.PublishedParsed,
-		article.Author.Name,
-		article.GUID,
-		feedLink)
-	if err != nil {
-		log.Errorf("failed to exec insert of content %+v. err: %v", article, err)
-		return err
-	}
-	return nil
+	// _, err = stmt.Exec(
+	// 	article.Title,
+	// 	article.Description,
+	// 	article.Content,
+	// 	article.Link,
+	// 	article.UpdatedParsed,
+	// 	article.PublishedParsed,
+	// 	article.Author.Name,
+	// 	article.GUID,
+	// 	feedLink)
+	// if err != nil {
+	// 	log.Errorf("failed to exec insert of content %+v. err: %v", article, err)
+	// 	return err
+	// }
+	// return nil
+	log.Panic("not implemented")
+	return &model.ContentItem{}, nil
+}
+
+func (db DB) ListContentItems() ([]model.ContentItem, error) {
+	log.Panic("not implemented")
+	return []model.ContentItem{}, nil
 }
 
 func createUsersTable(db *sql.DB) {
