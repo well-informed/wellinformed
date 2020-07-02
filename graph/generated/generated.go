@@ -72,12 +72,13 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddSrcRSSFeed func(childComplexity int, feedLink string) int
+		Login         func(childComplexity int, input model.LoginInput) int
 		Register      func(childComplexity int, input model.RegisterInput) int
 	}
 
 	Query struct {
 		SrcRSSFeed func(childComplexity int, input *model.SrcRSSFeedInput) int
-		UserFeed   func(childComplexity int, input int64) int
+		UserFeed   func(childComplexity int) int
 	}
 
 	SrcRSSFeed struct {
@@ -93,12 +94,14 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
+		CreatedAt func(childComplexity int) int
 		Email     func(childComplexity int) int
 		Feed      func(childComplexity int) int
 		Firstname func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Lastname  func(childComplexity int) int
 		Password  func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
 		Username  func(childComplexity int) int
 	}
 
@@ -112,10 +115,11 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
+	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
 }
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
-	UserFeed(ctx context.Context, input int64) (*model.UserFeed, error)
+	UserFeed(ctx context.Context) (*model.UserFeed, error)
 }
 
 type executableSchema struct {
@@ -264,6 +268,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AddSrcRSSFeed(childComplexity, args["feedLink"].(string)), true
 
+	case "Mutation.login":
+		if e.complexity.Mutation.Login == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_login_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.Login(childComplexity, args["input"].(model.LoginInput)), true
+
 	case "Mutation.register":
 		if e.complexity.Mutation.Register == nil {
 			break
@@ -293,12 +309,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Query_userFeed_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.UserFeed(childComplexity, args["input"].(int64)), true
+		return e.complexity.Query.UserFeed(childComplexity), true
 
 	case "SrcRSSFeed.description":
 		if e.complexity.SrcRSSFeed.Description == nil {
@@ -363,6 +374,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SrcRSSFeed.Updated(childComplexity), true
 
+	case "User.createdAt":
+		if e.complexity.User.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.User.CreatedAt(childComplexity), true
+
 	case "User.email":
 		if e.complexity.User.Email == nil {
 			break
@@ -404,6 +422,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Password(childComplexity), true
+
+	case "User.updatedAt":
+		if e.complexity.User.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.User.UpdatedAt(childComplexity), true
 
 	case "User.username":
 		if e.complexity.User.Username == nil {
@@ -551,6 +576,8 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
+  createdAt: Time!
+  updatedAt: Time!
 }
 
 input SrcRSSFeedInput {
@@ -568,14 +595,20 @@ input RegisterInput {
   lastname: String!
 }
 
+input LoginInput {
+  email: String!
+  password: String!
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
-  userFeed(input: ID!): UserFeed!
+  userFeed: UserFeed!
 }
 
 type Mutation {
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
   register(input: RegisterInput!): AuthResponse!
+  login(input: LoginInput!): AuthResponse!
 }
 `, BuiltIn: false},
 }
@@ -596,6 +629,20 @@ func (ec *executionContext) field_Mutation_addSrcRSSFeed_args(ctx context.Contex
 		}
 	}
 	args["feedLink"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.LoginInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNLoginInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐLoginInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -633,20 +680,6 @@ func (ec *executionContext) field_Query_srcRSSFeed_args(ctx context.Context, raw
 	var arg0 *model.SrcRSSFeedInput
 	if tmp, ok := rawArgs["input"]; ok {
 		arg0, err = ec.unmarshalOSrcRSSFeedInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedInput(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_userFeed_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int64
-	if tmp, ok := rawArgs["input"]; ok {
-		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1339,6 +1372,47 @@ func (ec *executionContext) _Mutation_register(ctx context.Context, field graphq
 	return ec.marshalNAuthResponse2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAuthResponse(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_login_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().Login(rctx, args["input"].(model.LoginInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.AuthResponse)
+	fc.Result = res
+	return ec.marshalNAuthResponse2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAuthResponse(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_srcRSSFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1395,16 +1469,9 @@ func (ec *executionContext) _Query_userFeed(ctx context.Context, field graphql.C
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_userFeed_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().UserFeed(rctx, args["input"].(int64))
+		return ec.resolvers.Query().UserFeed(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2023,6 +2090,74 @@ func (ec *executionContext) _User_feed(ctx context.Context, field graphql.Collec
 	res := resTmp.(*model.UserFeed)
 	fc.Result = res
 	return ec.marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserFeed_userID(ctx context.Context, field graphql.CollectedField, obj *model.UserFeed) (ret graphql.Marshaler) {
@@ -3182,6 +3317,30 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj interface{}) (model.LoginInput, error) {
+	var it model.LoginInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "email":
+			var err error
+			it.Email, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "password":
+			var err error
+			it.Password, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRegisterInput(ctx context.Context, obj interface{}) (model.RegisterInput, error) {
 	var it model.RegisterInput
 	var asMap = obj.(map[string]interface{})
@@ -3432,6 +3591,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "login":
+			out.Values[i] = ec._Mutation_login(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3602,6 +3766,16 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "feed":
 			out.Values[i] = ec._User_feed(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._User_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._User_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4003,6 +4177,10 @@ func (ec *executionContext) marshalNID2int64(ctx context.Context, sel ast.Select
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐLoginInput(ctx context.Context, v interface{}) (model.LoginInput, error) {
+	return ec.unmarshalInputLoginInput(ctx, v)
 }
 
 func (ec *executionContext) unmarshalNRegisterInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐRegisterInput(ctx context.Context, v interface{}) (model.RegisterInput, error) {

@@ -7,12 +7,18 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
+)
+
+var (
+	ErrBadCredentials  = errors.New("email/password combination don't work")
+	ErrUnauthenticated = errors.New("unauthenticated")
+	ErrForbidden       = errors.New("unauthorized")
 )
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
@@ -55,7 +61,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, errors.New("email already in used")
 	}
 
-	_, err = r.DB.GetUserByField("username", input.Username)
+	_, err = r.DB.GetUserByField("user_name", input.Username)
 
 	if err == nil {
 		return nil, errors.New("username already in used")
@@ -91,6 +97,28 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 	}, nil
 }
 
+func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
+	user, err := r.DB.GetUserByField("email", input.Email)
+	if err != nil {
+		return nil, ErrBadCredentials
+	}
+
+	err = user.ComparePassword(input.Password)
+	if err != nil {
+		return nil, ErrBadCredentials
+	}
+
+	token, err := user.GenToken()
+	if err != nil {
+		return nil, errors.New("something went wrong")
+	}
+
+	return &model.AuthResponse{
+		AuthToken: token,
+		User:      &user,
+	}, nil
+}
+
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -103,8 +131,17 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	return &feed, nil
 }
 
-func (r *queryResolver) UserFeed(ctx context.Context, input int64) (*model.UserFeed, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
+	currentUser, err := GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user feed: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+	log.Printf("currentUser: %v", currentUser)
+	return &model.UserFeed{
+		UserID: strconv.FormatInt(currentUser.ID, 10),
+		Name:   "it's a user feed!",
+	}, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

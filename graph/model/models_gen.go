@@ -32,6 +32,11 @@ type ContentItem struct {
 	SourceType  string     `json:"sourceType"`
 }
 
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type RegisterInput struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`
@@ -67,6 +72,8 @@ type User struct {
 	Email     string    `json:"email"`
 	Password  string    `json:"password"`
 	Feed      *UserFeed `json:"feed"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type UserFeed struct {

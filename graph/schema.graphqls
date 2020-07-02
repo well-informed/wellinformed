@@ -52,6 +52,8 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
+  createdAt: Time!
+  updatedAt: Time!
 }
 
 input SrcRSSFeedInput {
@@ -69,12 +71,18 @@ input RegisterInput {
   lastname: String!
 }
 
+input LoginInput {
+  email: String!
+  password: String!
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
-  userFeed(input: ID!): UserFeed!
+  userFeed: UserFeed!
 }
 
 type Mutation {
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
   register(input: RegisterInput!): AuthResponse!
+  login(input: LoginInput!): AuthResponse!
 }

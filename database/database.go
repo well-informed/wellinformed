@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 
 	_ "github.com/lib/pq"
@@ -103,8 +102,6 @@ func (db DB) GetUserByField(field string, value string) (model.User, error) {
 
 	s := []string{"SELECT * FROM users WHERE", field, "= $1"}
 	stmt := strings.Join(s, " ")
-
-	fmt.Println(stmt)
 
 	err := db.QueryRow(stmt, value).Scan(
 		&user.ID,
