@@ -83,10 +83,10 @@ func GetCurrentUserFromCTX(ctx context.Context) (*model.User, error) {
 	}
 
 	fmt.Println(ctx.Value(CurrentUserKey))
-	user, ok := ctx.Value(CurrentUserKey).(*model.User)
+	user, ok := ctx.Value(CurrentUserKey).(model.User)
 	if !ok {
 		return nil, errNoUserInContext
 	}
 
-	return user, nil
+	return &user, nil
 }
