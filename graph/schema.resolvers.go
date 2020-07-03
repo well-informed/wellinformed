@@ -54,14 +54,14 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
 	// TODO: add validation on input
 
-	_, err := r.DB.GetUserByField("email", input.Email)
+	_, err := r.DB.GetUserByEmail(input.Email)
 
 	if err == nil {
-		log.Printf("error while GetUserByField: %v", err)
+		log.Printf("error while GetUserByEmail: %v", err)
 		return nil, errors.New("email already in used")
 	}
 
-	_, err = r.DB.GetUserByField("user_name", input.Username)
+	_, err = r.DB.GetUserByUsername(input.Username)
 
 	if err == nil {
 		return nil, errors.New("username already in used")
@@ -80,7 +80,9 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, errors.New("something went wrong")
 	}
 
-	if _, err := r.DB.CreateUser(*user); err != nil {
+	createdUser, err := r.DB.CreateUser(*user)
+
+	if err != nil {
 		log.Printf("error creating a user: %v", err)
 		return nil, err
 	}
@@ -93,18 +95,18 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 	return &model.AuthResponse{
 		AuthToken: token,
-		User:      user,
+		User:      &createdUser,
 	}, nil
 }
 
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
-	user, err := r.DB.GetUserByField("email", input.Email)
-	if err != nil {
+	user, err := r.DB.GetUserByEmail(input.Email)
+	if err == nil {
 		return nil, ErrBadCredentials
 	}
 
 	err = user.ComparePassword(input.Password)
-	if err != nil {
+	if err == nil {
 		return nil, ErrBadCredentials
 	}
 

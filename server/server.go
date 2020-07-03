@@ -40,7 +40,7 @@ func main() {
 
 	// router.Use(middleware.RequestID)
 	// router.Use(middleware.Logger)
-	router.Use(graph.AuthMiddleware(*&resolver.DB))
+	router.Use(graph.AuthMiddleware(resolver.DB))
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 

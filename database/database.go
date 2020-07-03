@@ -97,13 +97,13 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
 	return feed, nil
 }
 
-func (db DB) GetUserByField(field string, value string) (model.User, error) {
+func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (model.User, error) {
 	var user model.User
 
-	s := []string{"SELECT * FROM users WHERE", field, "= $1"}
+	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
 	stmt := strings.Join(s, " ")
 
-	err := db.QueryRow(stmt, value).Scan(
+	err := db.QueryRow(stmt, args...).Scan(
 		&user.ID,
 		&user.Firstname,
 		&user.Lastname,
@@ -113,6 +113,18 @@ func (db DB) GetUserByField(field string, value string) (model.User, error) {
 	)
 
 	return user, err
+}
+
+func (db DB) GetUserByEmail(value string) (model.User, error) {
+	return db.getUserByField("*", "email = $1", value)
+}
+
+func (db DB) GetUserByUsername(value string) (model.User, error) {
+	return db.getUserByField("*", "user_name = $1", value)
+}
+
+func (db DB) GetUserById(value string) (model.User, error) {
+	return db.getUserByField("*", "id = $1", value)
 }
 
 func (db DB) CreateUser(user model.User) (model.User, error) {
@@ -139,7 +151,7 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 		user.Password,
 	).Scan(&ID)
 	if err != nil {
-		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
+		log.Errorf("failed to insert row to create user. err: ", err)
 		return user, err
 	}
 	user.ID = ID

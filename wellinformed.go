@@ -9,7 +9,9 @@ import (
 type Persistor interface {
 	InsertSrcRSSFeed(model.SrcRSSFeed) (model.SrcRSSFeed, error)
 	SelectSrcRSSFeed(model.SrcRSSFeedInput) (model.SrcRSSFeed, error)
-	GetUserByField(string, string) (model.User, error)
+	GetUserByEmail(string) (model.User, error)
+	GetUserByUsername(string) (model.User, error)
+	GetUserById(string) (model.User, error)
 	CreateUser(model.User) (model.User, error)
 }
 

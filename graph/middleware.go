@@ -32,7 +32,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 				return
 			}
 
-			user, err := db.GetUserByField("id", claims["jti"].(string))
+			user, err := db.GetUserById(claims["jti"].(string))
 			// fmt.Println(user)
 			if err != nil {
 				next.ServeHTTP(w, r)
