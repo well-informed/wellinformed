@@ -23,8 +23,7 @@ func (u *User) HashPassword(password string) error {
 }
 
 // GenToken - Generates JWT Tokens
-func (u *User) GenToken() (*AuthToken, error) {
-	expiredAt := time.Now().Add(time.Hour * 24 * 7) // a week
+func (u *User) GenToken(expiredAt time.Time, env string) (*AuthToken, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		ExpiresAt: expiredAt.Unix(),
@@ -33,7 +32,7 @@ func (u *User) GenToken() (*AuthToken, error) {
 		Issuer:    "wellinformed",
 	})
 
-	accessToken, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	accessToken, err := token.SignedString([]byte(os.Getenv(env)))
 	if err != nil {
 		return nil, err
 	}
@@ -42,6 +41,14 @@ func (u *User) GenToken() (*AuthToken, error) {
 		AccessToken: accessToken,
 		ExpiredAt:   expiredAt,
 	}, nil
+}
+
+func (u *User) GenAccessToken() (*AuthToken, error) {
+	return u.GenToken(time.Now().Add(time.Minute*30), "JWT_ACCESS_SECRET") // 30 minutes
+}
+
+func (u *User) GenRefreshToken() (*AuthToken, error) {
+	return u.GenToken(time.Now().Add(time.Hour*24*7), "JWT_REFRESH_SECRET") // a week
 }
 
 // ComparePassword - Compares Passwords

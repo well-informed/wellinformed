@@ -10,6 +10,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed"
 	"github.com/well-informed/wellinformed/graph/model"
 )
@@ -20,6 +21,8 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, err := parseToken(r)
+			_, cookieErr := r.Cookie("jid")
+
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
@@ -28,6 +31,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			claims, ok := token.Claims.(jwt.MapClaims)
 
 			if !ok || !token.Valid {
+				log.Printf("token not valid")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -35,11 +39,27 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			user, err := db.GetUserById(claims["jti"].(string))
 			// fmt.Println(user)
 			if err != nil {
+				log.Printf("err getting user from token")
 				next.ServeHTTP(w, r)
 				return
 			}
 
+			// set the current user in context
 			ctx := context.WithValue(r.Context(), CurrentUserKey, user)
+
+			if cookieErr != nil {
+				refreshToken, err := user.GenRefreshToken()
+				if err != nil {
+					next.ServeHTTP(w, r)
+					return
+				}
+				log.Printf("refreshToken: %v", refreshToken.AccessToken)
+				http.SetCookie(w, &http.Cookie{
+					Name:     "jid",
+					Value:    refreshToken.AccessToken,
+					HttpOnly: true,
+				})
+			}
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -51,14 +71,17 @@ var authHeaderExtractor = &request.PostExtractionFilter{
 	Filter:    stripBearerPrefixFromToken,
 }
 
-func stripBearerPrefixFromToken(token string) (string, error) {
-	bearer := "BEARER"
+func stripPrefixFromValue(prefix string, value string) (string, error) {
 
-	if len(token) > len(bearer) && strings.ToUpper(token[0:len(bearer)]) == bearer {
-		return token[len(bearer)+1:], nil
+	if len(value) > len(prefix) && strings.ToUpper(value[0:len(prefix)]) == prefix {
+		return value[len(prefix)+1:], nil
 	}
 
-	return token, nil
+	return value, nil
+}
+
+func stripBearerPrefixFromToken(token string) (string, error) {
+	return stripPrefixFromValue("BEARER", token)
 }
 
 var authExtractor = &request.MultiExtractor{
@@ -71,7 +94,6 @@ func parseToken(r *http.Request) (*jwt.Token, error) {
 		t := []byte(os.Getenv("JWT_SECRET"))
 		return t, nil
 	})
-
 	return jwtToken, errors.Wrap(err, "parseToken error: ")
 }
 

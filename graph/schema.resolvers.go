@@ -87,7 +87,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, err
 	}
 
-	token, err := user.GenToken()
+	token, err := user.GenAccessToken()
 	if err != nil {
 		log.Printf("error while generating the token: %v", err)
 		return nil, errors.New("something went wrong")
@@ -100,23 +100,28 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 }
 
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
+	// log.Printf("context: %v", ctx)
 	user, err := r.DB.GetUserByEmail(input.Email)
-	if err == nil {
+	log.Printf("user: %v", user)
+	if err != nil {
+		log.Printf("GetUserByEmail err: %v", err)
 		return nil, ErrBadCredentials
 	}
 
 	err = user.ComparePassword(input.Password)
-	if err == nil {
+	if err != nil {
+		log.Printf("ComparePassword err: %v", err)
 		return nil, ErrBadCredentials
 	}
 
-	token, err := user.GenToken()
+	accessToken, err := user.GenAccessToken()
+	// refreshToken, rerr := user.GenRefreshToken()
 	if err != nil {
 		return nil, errors.New("something went wrong")
 	}
 
 	return &model.AuthResponse{
-		AuthToken: token,
+		AuthToken: accessToken,
 		User:      &user,
 	}, nil
 }
