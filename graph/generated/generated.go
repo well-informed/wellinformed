@@ -38,6 +38,7 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	SrcRSSFeed() SrcRSSFeedResolver
 }
 
 type DirectiveRoot struct {
@@ -107,6 +108,9 @@ type MutationResolver interface {
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context, input int64) (*model.UserFeed, error)
+}
+type SrcRSSFeedResolver interface {
+	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
 }
 
 type executableSchema struct {
@@ -1623,13 +1627,13 @@ func (ec *executionContext) _SrcRSSFeed_contentItems(ctx context.Context, field 
 		Object:   "SrcRSSFeed",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ContentItems, nil
+		return ec.resolvers.SrcRSSFeed().ContentItems(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3261,44 +3265,53 @@ func (ec *executionContext) _SrcRSSFeed(ctx context.Context, sel ast.SelectionSe
 		case "id":
 			out.Values[i] = ec._SrcRSSFeed_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._SrcRSSFeed_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "description":
 			out.Values[i] = ec._SrcRSSFeed_description(ctx, field, obj)
 		case "link":
 			out.Values[i] = ec._SrcRSSFeed_link(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "feedLink":
 			out.Values[i] = ec._SrcRSSFeed_feedLink(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "updated":
 			out.Values[i] = ec._SrcRSSFeed_updated(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "lastFetchedAt":
 			out.Values[i] = ec._SrcRSSFeed_lastFetchedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "language":
 			out.Values[i] = ec._SrcRSSFeed_language(ctx, field, obj)
 		case "generator":
 			out.Values[i] = ec._SrcRSSFeed_generator(ctx, field, obj)
 		case "contentItems":
-			out.Values[i] = ec._SrcRSSFeed_contentItems(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SrcRSSFeed_contentItems(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

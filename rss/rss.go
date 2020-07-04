@@ -19,16 +19,18 @@ func NewRSS() *RSS {
 	}
 }
 
-func (rss *RSS) FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSSFeed, error) {
+func (rss *RSS) FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSSFeed, []*model.ContentItem, error) {
 	feed, err := rss.ParseURLWithContext(feedLink, ctx)
 	if err != nil {
 		log.Errorf("could not parse feed at url: %v. err: ", feedLink, err)
-		return model.SrcRSSFeed{}, err
+		return model.SrcRSSFeed{}, nil, err
 	}
 
 	convertedFeed := convertToModelFeed(feed)
 
-	return *convertedFeed, nil
+	contentItems := convertModelContentItems(feed.Items, feed)
+
+	return *convertedFeed, contentItems, nil
 }
 
 func (rss *RSS) WatchSrcFeed(feedLink string) error {
@@ -37,7 +39,7 @@ func (rss *RSS) WatchSrcFeed(feedLink string) error {
 }
 
 func convertToModelFeed(feed *gofeed.Feed) *model.SrcRSSFeed {
-	return &model.SrcRSSFeed{
+	modelFeed := &model.SrcRSSFeed{
 		Title:         feed.Title,
 		Description:   &feed.Description,
 		Link:          feed.Link,
@@ -47,9 +49,21 @@ func convertToModelFeed(feed *gofeed.Feed) *model.SrcRSSFeed {
 		Language:      &feed.Language,
 		Generator:     &feed.Generator,
 	}
+
+	return modelFeed
 }
 
-func convertToModelContentItem(item *gofeed.Item, feed *model.SrcRSSFeed) *model.ContentItem {
+//Converts the items returned on the gofeed.Feed struct into their internal representation
+//Requires a model.SrcRSSFeed so the source ID can be attached to the contentItems for reference
+func convertModelContentItems(items []*gofeed.Item, feed *gofeed.Feed) []*model.ContentItem {
+	var contentItems []*model.ContentItem
+	for _, item := range items {
+		contentItems = append(contentItems, convertToModelContentItem(item, feed))
+	}
+	return contentItems
+}
+
+func convertToModelContentItem(item *gofeed.Item, feed *gofeed.Feed) *model.ContentItem {
 	var author *string
 	if item.Author != nil {
 		author = &item.Author.Name
@@ -61,7 +75,6 @@ func convertToModelContentItem(item *gofeed.Item, feed *model.SrcRSSFeed) *model
 		imageURL = &item.Image.URL
 	}
 	return &model.ContentItem{
-		SourceID:    feed.ID,
 		SourceTitle: feed.Title,
 		SourceLink:  feed.Link,
 		Title:       item.Title,
@@ -76,3 +89,5 @@ func convertToModelContentItem(item *gofeed.Item, feed *model.SrcRSSFeed) *model
 		ImageURL:    imageURL,
 	}
 }
+
+//TODO

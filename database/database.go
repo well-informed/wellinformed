@@ -33,7 +33,7 @@ func NewDB() DB {
 or exits the program with call to log.Fatal()*/
 func createTables(db *sql.DB) {
 	createSrcRSSFeedsTable(db)
-	// createMainFeedTable(db)
+	createContentItemsTable(db)
 	// createUsersTable(db)
 	// createUserHistoryTable(db)
 }
@@ -135,8 +135,8 @@ func createContentItemsTable(db *sql.DB) {
 	CREATE TABLE IF NOT EXISTS content_items
  ( id BIGSERIAL PRIMARY KEY,
 	 source_id int NOT NULL REFERENCES src_rss_feeds(id),
-	 source_title NOT NULL,
-	 source_link NOT NULL,
+	 source_title varchar NOT NULL,
+	 source_link varchar NOT NULL,
 	 title varchar NOT NULL,
 	 description varchar,
 	 content varchar,
@@ -146,7 +146,8 @@ func createContentItemsTable(db *sql.DB) {
 	 author varchar,
 	 guid varchar NOT NULL,
 	 image_title varchar,
-	 image_url varchar
+	 image_url varchar,
+	 UNIQUE (source_id, link)
  )`
 	_, err := db.Exec(stmt)
 	if err != nil {
@@ -154,45 +155,93 @@ func createContentItemsTable(db *sql.DB) {
 	}
 }
 
-func (db DB) InsertContentItem(model.ContentItem) (*model.ContentItem, error) {
-	// stmt, err := db.Prepare(`INSERT INTO main_feed
-	// (title,
-	// description,
-	// htmlContent,
-	// link,
-	// updated,
-	// published,
-	// author,
-	// guid,
-	// parent_feed)
-	// values($1,$2,$3,$4,$5,$6,$7,$8,$9)`)
-	// if err != nil {
-	// 	log.Error("failed to prepare rss_articles insert", err)
-	// 	return err
-	// }
+func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentItem, error) {
+	log.Debugf("about to insert item with source_id: %v, link: %v", contentItem.SourceID, contentItem.Link)
+	stmt, err := db.Prepare(`INSERT INTO content_items
+	( source_id,
+		source_title,
+		source_link,
+		title,
+		description,
+		content,
+		link,
+		updated,
+		published,
+		author,
+		guid,
+		image_title,
+		image_url)
+	values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+	RETURNING id`)
+	if err != nil {
+		log.Error("failed to prepare content_items insert", err)
+		return nil, err
+	}
 
-	// _, err = stmt.Exec(
-	// 	article.Title,
-	// 	article.Description,
-	// 	article.Content,
-	// 	article.Link,
-	// 	article.UpdatedParsed,
-	// 	article.PublishedParsed,
-	// 	article.Author.Name,
-	// 	article.GUID,
-	// 	feedLink)
-	// if err != nil {
-	// 	log.Errorf("failed to exec insert of content %+v. err: %v", article, err)
-	// 	return err
-	// }
-	// return nil
-	log.Panic("not implemented")
-	return &model.ContentItem{}, nil
+	var id int64
+	err = stmt.QueryRow(
+		contentItem.SourceID,
+		contentItem.SourceTitle,
+		contentItem.SourceLink,
+		contentItem.Title,
+		contentItem.Description,
+		contentItem.Content,
+		contentItem.Link,
+		contentItem.Updated,
+		contentItem.Published,
+		contentItem.Author,
+		contentItem.GUID,
+		contentItem.ImageTitle,
+		contentItem.ImageURL,
+	).Scan(&id)
+	if err != nil {
+		log.Errorf("failed to insert row to content_items. err: ", err)
+		return nil, err
+	}
+	contentItem.ID = id
+	return &contentItem, nil
 }
 
-func (db DB) ListContentItems() ([]model.ContentItem, error) {
-	log.Panic("not implemented")
-	return []model.ContentItem{}, nil
+func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
+	log.Debug("received query with src feed object: ", src)
+	stmt := `SELECT * FROM content_items WHERE source_id = $1`
+	rows, err := db.Query(stmt, src.ID)
+	if err != nil {
+		log.Error("Error selecting content items by source from db. err: ", err)
+		return nil, err
+	}
+	defer rows.Close()
+	contentItems := make([]*model.ContentItem, 0)
+	for rows.Next() {
+		var contentItem model.ContentItem
+		err := rows.Scan(
+			&contentItem.ID,
+			&contentItem.SourceID,
+			&contentItem.SourceTitle,
+			&contentItem.SourceLink,
+			&contentItem.Title,
+			&contentItem.Description,
+			&contentItem.Content,
+			&contentItem.Link,
+			&contentItem.Updated,
+			&contentItem.Published,
+			&contentItem.Author,
+			&contentItem.GUID,
+			&contentItem.ImageTitle,
+			&contentItem.ImageURL,
+		)
+		if err != nil {
+			log.Error("error with scan. err: ", err)
+			return nil, err
+		}
+		log.Debugf("selected contentItem, ID: %v, title: %v", contentItem.ID, contentItem.Title)
+		contentItems = append(contentItems, &contentItem)
+	}
+	if err := rows.Err(); err != nil {
+		log.Error("error while retrieving content items by source. err: ", err)
+		return nil, err
+	}
+	return contentItems, nil
 }
 
 func createUsersTable(db *sql.DB) {

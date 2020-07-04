@@ -26,7 +26,10 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 		return existingFeed, nil
 	}
 	log.Debug("passed select, fetching feed")
-	feed, err := r.RSS.FetchSrcFeed(feedLink, ctx)
+	//TODO: Figure out how to resolve the problem where we can't be sure by the type def
+	//whether or not the feed/contentItem has been assigned a database ID.
+	//Maybe just assigned UUID internally and make the database accept them?
+	feed, contentItems, err := r.RSS.FetchSrcFeed(feedLink, ctx)
 	if err != nil {
 		log.Errorf("couldn't fetch SrcFeed in order to add it.")
 		return nil, err
@@ -35,13 +38,12 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	if err != nil {
 		return nil, err
 	}
+	log.Debug("inserted feed ID: ", insertedFeed.ID)
+	for _, item := range contentItems {
 
-	// json, err := json.Marshal(feed)
-	// if err != nil {
-	// 	log.Error("feed object can't be json marshalled", err)
-	// }
-	// log.Info("manual json: ", string(json))
-	// log.Infof("feed object to return: %+v", feed)
+		item.SourceID = insertedFeed.ID
+		r.DB.InsertContentItem(*item)
+	}
 	return insertedFeed, nil
 }
 
@@ -61,18 +63,24 @@ func (r *queryResolver) UserFeed(ctx context.Context, input int64) (*model.UserF
 	panic(fmt.Errorf("not implemented"))
 }
 
+func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
+	log.Debug("resolving ContentItems")
+	contentItems, err := r.DB.ListContentItemsBySource(obj)
+	if err != nil {
+		return nil, err
+	}
+	return contentItems, nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// SrcRSSFeed returns generated.SrcRSSFeedResolver implementation.
+func (r *Resolver) SrcRSSFeed() generated.SrcRSSFeedResolver { return &srcRSSFeedResolver{r} }
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+type srcRSSFeedResolver struct{ *Resolver }

@@ -10,10 +10,10 @@ type Persistor interface {
 	InsertSrcRSSFeed(model.SrcRSSFeed) (*model.SrcRSSFeed, error)
 	SelectSrcRSSFeed(model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	InsertContentItem(model.ContentItem) (*model.ContentItem, error)
-	ListContentItems() ([]model.ContentItem, error)
+	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
 }
 
 type RSS interface {
-	FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSSFeed, error)
+	FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSSFeed, []*model.ContentItem, error)
 	WatchSrcFeed(feedLink string) error
 }
