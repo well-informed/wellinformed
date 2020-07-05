@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"strings"
 
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
@@ -34,7 +35,7 @@ or exits the program with call to log.Fatal()*/
 func createTables(db *sql.DB) {
 	createSrcRSSFeedsTable(db)
 	createContentItemsTable(db)
-	// createUsersTable(db)
+	createUsersTable(db)
 	// createUserHistoryTable(db)
 }
 
@@ -93,6 +94,68 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 	feed.ID = id
 	log.Info("got id back: ", id)
 	return &feed, nil
+}
+
+func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (model.User, error) {
+	var user model.User
+
+	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
+	stmt := strings.Join(s, " ")
+
+	err := db.QueryRow(stmt, args...).Scan(
+		&user.ID,
+		&user.Firstname,
+		&user.Lastname,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+	)
+
+	return user, err
+}
+
+func (db DB) GetUserByEmail(value string) (model.User, error) {
+	return db.getUserByField("*", "email = $1", value)
+}
+
+func (db DB) GetUserByUsername(value string) (model.User, error) {
+	return db.getUserByField("*", "user_name = $1", value)
+}
+
+func (db DB) GetUserById(value string) (model.User, error) {
+	return db.getUserByField("*", "id = $1", value)
+}
+
+func (db DB) CreateUser(user model.User) (model.User, error) {
+	stmt, err := db.Prepare(`INSERT INTO users
+	( email,
+		first_name,
+		last_name,
+		user_name,
+		password)
+		values($1,$2,$3,$4,$5)
+		RETURNING id
+		`)
+	if err != nil {
+		log.Error("failed to prepare user insert: ", err)
+		return user, err
+	}
+
+	var ID int64
+	err = stmt.QueryRow(
+		user.Email,
+		user.Firstname,
+		user.Lastname,
+		user.Username,
+		user.Password,
+	).Scan(&ID)
+	if err != nil {
+		log.Errorf("failed to insert row to create user. err: ", err)
+		return user, err
+	}
+	user.ID = ID
+	log.Info("got id back: ", ID)
+	return user, nil
 }
 
 func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -247,7 +310,8 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 func createUsersTable(db *sql.DB) {
 	stmt := `
 	CREATE TABLE IF NOT EXISTS users
-	( userID varchar NOT NULL PRIMARY KEY,
+	( id BIGSERIAL PRIMARY KEY,
+		email varchar,
 		first_name varchar,
 		last_name varchar,
 		user_name varchar,

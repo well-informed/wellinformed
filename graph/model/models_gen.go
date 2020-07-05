@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+type AuthResponse struct {
+	AuthToken *AuthToken `json:"authToken"`
+	User      *User      `json:"user"`
+}
+
+type AuthToken struct {
+	AccessToken string    `json:"accessToken"`
+	ExpiredAt   time.Time `json:"expiredAt"`
+}
+
 type ContentItem struct {
 	ID          int64      `json:"id"`
 	SourceID    int64      `json:"sourceID"`
@@ -24,6 +34,20 @@ type ContentItem struct {
 	SourceType  string     `json:"sourceType"`
 }
 
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type RegisterInput struct {
+	Username        string `json:"username"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirmPassword"`
+	Firstname       string `json:"firstname"`
+	Lastname        string `json:"lastname"`
+}
+
 type SrcRSSFeedInput struct {
 	ID       *int64  `json:"id"`
 	Link     *string `json:"link"`
@@ -38,6 +62,8 @@ type User struct {
 	Email     string    `json:"email"`
 	Password  string    `json:"password"`
 	Feed      *UserFeed `json:"feed"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type UserFeed struct {
