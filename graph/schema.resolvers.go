@@ -26,9 +26,6 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 		return existingFeed, nil
 	}
 	log.Debug("passed select, fetching feed")
-	//TODO: Figure out how to resolve the problem where we can't be sure by the type def
-	//whether or not the feed/contentItem has been assigned a database ID.
-	//Maybe just assigned UUID internally and make the database accept them?
 	feed, contentItems, err := r.RSS.FetchSrcFeed(feedLink, ctx)
 	if err != nil {
 		log.Errorf("couldn't fetch SrcFeed in order to add it.")

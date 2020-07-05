@@ -89,5 +89,3 @@ func convertToModelContentItem(item *gofeed.Item, feed *gofeed.Feed) *model.Cont
 		ImageURL:    imageURL,
 	}
 }
-
-//TODO
