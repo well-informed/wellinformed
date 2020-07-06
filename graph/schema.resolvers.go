@@ -151,6 +151,15 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 	}, nil
 }
 
+func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
+	currentUser, err := GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user feed: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+	return currentUser, nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
