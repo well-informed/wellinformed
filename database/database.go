@@ -98,7 +98,7 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
 }
 
 func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (*model.User, error) {
-	var user *model.User
+	var user model.User
 
 	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
 	stmt := strings.Join(s, " ")
@@ -112,7 +112,11 @@ func (db DB) getUserByField(selection string, whereClause string, args ...interf
 		&user.Password,
 	)
 
-	return user, err
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	return &user, err
 }
 
 func (db DB) GetUserByEmail(value string) (*model.User, error) {
