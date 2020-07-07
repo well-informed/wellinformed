@@ -96,6 +96,11 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 	return &feed, nil
 }
 
+//TODO: complete implementation. Might be a good first candidate for an ORM.
+func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (*model.UserSubscription, error) {
+	stmt, err := db.Prepare(`INSERT INTO user_subscriptions`)
+}
+
 func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (model.User, error) {
 	var user model.User
 

@@ -54,20 +54,15 @@ type SrcRSSFeedInput struct {
 	FeedLink *string `json:"feedLink"`
 }
 
-type User struct {
-	ID        int64     `json:"id"`
-	Firstname string    `json:"firstname"`
-	Lastname  string    `json:"lastname"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Password  string    `json:"password"`
-	Feed      *UserFeed `json:"feed"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-}
-
 type UserFeed struct {
 	UserID       string         `json:"userID"`
 	Name         string         `json:"name"`
 	ContentItems []*ContentItem `json:"contentItems"`
+}
+
+type UserSubscription struct {
+	ID         int64     `json:"id"`
+	UserID     int64     `json:"userID"`
+	SrcRSSFeed int64     `json:"srcRSSFeed"`
+	CreatedAt  time.Time `json:"createdAt"`
 }

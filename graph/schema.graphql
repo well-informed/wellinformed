@@ -41,6 +41,13 @@ type ContentItem {
   sourceType: String!
 }
 
+type UserSubscription {
+  id: ID!
+  userID: ID!
+  srcRSSFeed: ID!
+  createdAt: Time!
+}
+
 type UserFeed {
   userID: String!
   name: String!
@@ -57,6 +64,7 @@ type User {
   feed: UserFeed!
   createdAt: Time!
   updatedAt: Time!
+  srcRSSFeeds: [SrcRSSFeed!]!
 }
 
 input SrcRSSFeedInput {

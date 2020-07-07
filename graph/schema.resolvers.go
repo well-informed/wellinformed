@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -18,14 +19,25 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	user, err := GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Error("user not in context. err: ", err)
+		return nil, err
+	}
 	existingFeed, err := r.DB.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
 		return nil, err
 	}
 	log.Debug("existingFeed: ", existingFeed)
 	if existingFeed != nil {
+		_, err := r.DB.InsertUserSubscription(*user, *existingFeed)
+		if err != nil {
+
+			return nil, err
+		}
 		return existingFeed, nil
 	}
+	//TODO: might want to wrap all this in a db transaction
 	log.Debug("passed select, fetching feed")
 	feed, contentItems, err := r.RSS.FetchSrcFeed(feedLink, ctx)
 	if err != nil {
@@ -33,6 +45,10 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 		return nil, err
 	}
 	insertedFeed, err := r.DB.InsertSrcRSSFeed(feed)
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.DB.InsertUserSubscription(*user, *insertedFeed)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +170,10 @@ func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSS
 	return contentItems, nil
 }
 
+func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
@@ -163,9 +183,13 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 // SrcRSSFeed returns generated.SrcRSSFeedResolver implementation.
 func (r *Resolver) SrcRSSFeed() generated.SrcRSSFeedResolver { return &srcRSSFeedResolver{r} }
 
+// User returns generated.UserResolver implementation.
+func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
+type userResolver struct{ *Resolver }
 
 // !!! WARNING !!!
 // The code below was going to be deleted when updating resolvers. It has been copied here so you have
@@ -173,8 +197,3 @@ type srcRSSFeedResolver struct{ *Resolver }
 //  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
 //    it when you're done.
 //  - You have helper methods in this file. Move them out to keep these resolver files clean.
-var (
-	ErrBadCredentials  = errors.New("email/password combination don't work")
-	ErrUnauthenticated = errors.New("unauthenticated")
-	ErrForbidden       = errors.New("unauthorized")
-)

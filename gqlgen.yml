@@ -53,3 +53,5 @@ models:
       - github.com/99designs/gqlgen/graphql.Int32
   SrcRSSFeed:
     model: github.com/well-informed/wellinformed/graph/model.SrcRSSFeed
+  User:
+    model: github.com/well-informed/wellinformed/graph/model.User

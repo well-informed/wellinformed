@@ -9,6 +9,7 @@ import (
 type Persistor interface {
 	InsertSrcRSSFeed(model.SrcRSSFeed) (*model.SrcRSSFeed, error)
 	SelectSrcRSSFeed(model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
+	InsertUserSubscription(model.User, model.SrcRSSFeed) (*model.UserSubscription, error)
 	InsertContentItem(model.ContentItem) (*model.ContentItem, error)
 	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
 	GetUserByEmail(string) (model.User, error)

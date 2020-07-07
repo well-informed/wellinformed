@@ -17,6 +17,12 @@ import (
 
 const CurrentUserKey = "currentUser"
 
+var (
+	ErrBadCredentials  = errors.New("email/password combination don't work")
+	ErrUnauthenticated = errors.New("unauthenticated")
+	ErrForbidden       = errors.New("unauthorized")
+)
+
 func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
