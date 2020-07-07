@@ -98,7 +98,9 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 
 //TODO: complete implementation. Might be a good first candidate for an ORM.
 func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (*model.UserSubscription, error) {
-	stmt, err := db.Prepare(`INSERT INTO user_subscriptions`)
+	log.Panic("not implemented")
+	return nil, nil
+	// stmt, err := db.Prepare(`INSERT INTO user_subscriptions`)
 }
 
 func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (model.User, error) {
