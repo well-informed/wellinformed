@@ -6,12 +6,19 @@ package graph
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
+)
+
+var (
+	ErrBadCredentials  = errors.New("email/password combination don't work")
+	ErrUnauthenticated = errors.New("unauthenticated")
+	ErrForbidden       = errors.New("unauthorized")
 )
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
@@ -44,6 +51,86 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	return &feed, nil
 }
 
+func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
+	// TODO: add validation on input
+
+	existingUser, err := r.DB.GetUserByEmail(input.Email)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if existingUser != nil {
+		log.Printf("error while GetUserByEmail: %v", err)
+		return nil, errors.New("email already in used")
+	}
+
+	existingUser, err = r.DB.GetUserByUsername(input.Username)
+
+	if existingUser != nil {
+		return nil, errors.New("username already in used")
+	}
+
+	user := &model.User{
+		Username:  input.Username,
+		Email:     input.Email,
+		Firstname: input.Firstname,
+		Lastname:  input.Lastname,
+	}
+
+	err = user.HashPassword(input.Password)
+	if err != nil {
+		log.Printf("error while hashing password: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	createdUser, err := r.DB.CreateUser(*user)
+
+	if err != nil {
+		log.Printf("error creating a user: %v", err)
+		return nil, err
+	}
+
+	token, err := user.GenAccessToken()
+	if err != nil {
+		log.Printf("error while generating the token: %v", err)
+		return nil, errors.New("something went wrong")
+	}
+
+	return &model.AuthResponse{
+		AuthToken: token,
+		User:      &createdUser,
+	}, nil
+}
+
+func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
+	// log.Printf("context: %v", ctx)
+	existingUser, err := r.DB.GetUserByEmail(input.Email)
+	log.Printf("existingUser: %v", existingUser)
+
+	if existingUser == nil || err != nil {
+		log.Printf("GetUserByEmail err: %v", err)
+		return nil, errors.New("email/password combination don't work 1")
+	}
+
+	err = existingUser.ComparePassword(input.Password)
+	if err != nil {
+		log.Printf("ComparePassword err: %v", err)
+		return nil, errors.New("email/password combination don't work 2")
+	}
+
+	accessToken, err := existingUser.GenAccessToken()
+	// refreshToken, rerr := user.GenRefreshToken()
+	if err != nil {
+		return nil, errors.New("something went wrong")
+	}
+
+	return &model.AuthResponse{
+		AuthToken: accessToken,
+		User:      existingUser,
+	}, nil
+}
+
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -56,8 +143,26 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	return &feed, nil
 }
 
-func (r *queryResolver) UserFeed(ctx context.Context, input int64) (*model.UserFeed, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
+	currentUser, err := GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user feed: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+	log.Printf("currentUser: %v", currentUser)
+	return &model.UserFeed{
+		UserID: strconv.FormatInt(currentUser.ID, 10),
+		Name:   "it's a user feed!",
+	}, nil
+}
+
+func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
+	currentUser, err := GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user feed: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+	return currentUser, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.
