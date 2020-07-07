@@ -108,7 +108,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	existingUser, err := r.DB.GetUserByEmail(input.Email)
 	log.Printf("existingUser: %v", existingUser)
 
-	if existingUser != nil {
+	if existingUser == nil || err != nil {
 		log.Printf("GetUserByEmail err: %v", err)
 		return nil, errors.New("email/password combination don't work 1")
 	}
