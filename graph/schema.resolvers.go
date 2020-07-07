@@ -54,16 +54,20 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
 	// TODO: add validation on input
 
-	_, err := r.DB.GetUserByEmail(input.Email)
+	existingUser, err := r.DB.GetUserByEmail(input.Email)
 
-	if err == nil {
+	if err != nil {
+		return nil, err
+	}
+
+	if existingUser != nil {
 		log.Printf("error while GetUserByEmail: %v", err)
 		return nil, errors.New("email already in used")
 	}
 
-	_, err = r.DB.GetUserByUsername(input.Username)
+	existingUser, err = r.DB.GetUserByUsername(input.Username)
 
-	if err == nil {
+	if existingUser != nil {
 		return nil, errors.New("username already in used")
 	}
 
@@ -101,20 +105,21 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
 	// log.Printf("context: %v", ctx)
-	user, err := r.DB.GetUserByEmail(input.Email)
-	log.Printf("user: %v", user)
-	if err != nil {
+	existingUser, err := r.DB.GetUserByEmail(input.Email)
+	log.Printf("existingUser: %v", existingUser)
+
+	if existingUser != nil {
 		log.Printf("GetUserByEmail err: %v", err)
-		return nil, ErrBadCredentials
+		return nil, errors.New("email/password combination don't work 1")
 	}
 
-	err = user.ComparePassword(input.Password)
+	err = existingUser.ComparePassword(input.Password)
 	if err != nil {
 		log.Printf("ComparePassword err: %v", err)
-		return nil, ErrBadCredentials
+		return nil, errors.New("email/password combination don't work 2")
 	}
 
-	accessToken, err := user.GenAccessToken()
+	accessToken, err := existingUser.GenAccessToken()
 	// refreshToken, rerr := user.GenRefreshToken()
 	if err != nil {
 		return nil, errors.New("something went wrong")
@@ -122,7 +127,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 
 	return &model.AuthResponse{
 		AuthToken: accessToken,
-		User:      &user,
+		User:      existingUser,
 	}, nil
 }
 

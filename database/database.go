@@ -97,8 +97,8 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (model.SrcRSSFeed, error) {
 	return feed, nil
 }
 
-func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (model.User, error) {
-	var user model.User
+func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (*model.User, error) {
+	var user *model.User
 
 	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
 	stmt := strings.Join(s, " ")
@@ -115,15 +115,15 @@ func (db DB) getUserByField(selection string, whereClause string, args ...interf
 	return user, err
 }
 
-func (db DB) GetUserByEmail(value string) (model.User, error) {
+func (db DB) GetUserByEmail(value string) (*model.User, error) {
 	return db.getUserByField("*", "email = $1", value)
 }
 
-func (db DB) GetUserByUsername(value string) (model.User, error) {
+func (db DB) GetUserByUsername(value string) (*model.User, error) {
 	return db.getUserByField("*", "user_name = $1", value)
 }
 
-func (db DB) GetUserById(value string) (model.User, error) {
+func (db DB) GetUserById(value string) (*model.User, error) {
 	return db.getUserByField("*", "id = $1", value)
 }
 
