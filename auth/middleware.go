@@ -26,7 +26,6 @@ var (
 func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Info("in the auth middleware")
 			token, err := parseToken(r)
 			_, cookieErr := r.Cookie("jid")
 
@@ -54,7 +53,6 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 
 			// set the current user in context
 			ctx := context.WithValue(r.Context(), CurrentUserKey, user)
-			log.Infof("set ctx")
 			if cookieErr != nil {
 				refreshToken, err := user.GenRefreshToken()
 				if err != nil {
@@ -68,7 +66,6 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 					HttpOnly: true,
 				})
 			}
-			log.Info("end of auth. ctx: ", ctx)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
