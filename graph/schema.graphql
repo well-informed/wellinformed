@@ -90,6 +90,7 @@ input LoginInput {
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!
+  getUser: User!
 }
 
 type Mutation {

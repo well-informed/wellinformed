@@ -37,36 +37,12 @@ func createTables(db *sql.DB, tables []table) {
 	for _, table := range tables {
 		createTable(db, table.name, table.sql)
 	}
-
-	// createSrcRSSFeedsTable(db)
-	// createContentItemsTable(db)
-	// createUsersTable(db)
-	// createUserHistoryTable(db)
 }
 
 func createTable(db *sql.DB, name string, stmt string) {
 	_, err := db.Exec(stmt)
 	if err != nil {
 		log.Fatalf("error creating table %v. err: %v", name, err)
-	}
-}
-
-func createSrcRSSFeedsTable(db *sql.DB) {
-	stmt := `
-	CREATE TABLE IF NOT EXISTS src_rss_feeds
-	(	id SERIAL PRIMARY KEY,
-		title varchar NOT NULL,
-		description varchar,
-		link varchar UNIQUE NOT NULL,
-		feed_link varchar UNIQUE NOT NULL ,
-		updated timestamp with time zone,
-		last_fetched_at timestamp with time zone,
-		language varchar,
-		generator varchar
-	)`
-	_, err := db.Exec(stmt)
-	if err != nil {
-		log.Fatal("error creating rss_feeds table. err: ", err)
 	}
 }
 
@@ -134,7 +110,7 @@ func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subs
 	return subscription, err
 }
 
-func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (model.User, error) {
+func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (*model.User, error) {
 	var user model.User
 
 	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
@@ -149,18 +125,22 @@ func (db DB) getUserByField(selection string, whereClause string, args ...interf
 		&user.Password,
 	)
 
-	return user, err
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	return &user, err
 }
 
-func (db DB) GetUserByEmail(value string) (model.User, error) {
+func (db DB) GetUserByEmail(value string) (*model.User, error) {
 	return db.getUserByField("*", "email = $1", value)
 }
 
-func (db DB) GetUserByUsername(value string) (model.User, error) {
+func (db DB) GetUserByUsername(value string) (*model.User, error) {
 	return db.getUserByField("*", "user_name = $1", value)
 }
 
-func (db DB) GetUserById(value string) (model.User, error) {
+func (db DB) GetUserById(value string) (*model.User, error) {
 	return db.getUserByField("*", "id = $1", value)
 }
 

@@ -81,6 +81,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
+		GetUser    func(childComplexity int) int
 		SrcRSSFeed func(childComplexity int, input *model.SrcRSSFeedInput) int
 		UserFeed   func(childComplexity int) int
 	}
@@ -133,6 +134,7 @@ type MutationResolver interface {
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context) (*model.UserFeed, error)
+	GetUser(ctx context.Context) (*model.User, error)
 }
 type SrcRSSFeedResolver interface {
 	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
@@ -324,6 +326,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Register(childComplexity, args["input"].(model.RegisterInput)), true
+
+	case "Query.getUser":
+		if e.complexity.Query.GetUser == nil {
+			break
+		}
+
+		return e.complexity.Query.GetUser(childComplexity), true
 
 	case "Query.srcRSSFeed":
 		if e.complexity.Query.SrcRSSFeed == nil {
@@ -689,6 +698,7 @@ input LoginInput {
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!
+  getUser: User!
 }
 
 type Mutation {
@@ -1634,6 +1644,40 @@ func (ec *executionContext) _Query_userFeed(ctx context.Context, field graphql.C
 	res := resTmp.(*model.UserFeed)
 	fc.Result = res
 	return ec.marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_getUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetUser(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -4001,6 +4045,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_userFeed(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "getUser":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getUser(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

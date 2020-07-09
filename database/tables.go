@@ -35,7 +35,7 @@ var tables = []table{
 	},
 	{
 		name: "user_subscriptions",
-		sql: `CREATE TABLE user_subscriptions
+		sql: `CREATE TABLE IF NOT EXISTS user_subscriptions
 	( id BIGSERIAL PRIMARY KEY,
 		user_id int REFERENCES users(id),
 		source_id int REFERENCES src_rss_feeds(id),
