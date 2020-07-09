@@ -37,7 +37,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			}
 
 			user, err := db.GetUserById(claims["jti"].(string))
-			// fmt.Println(user)
+
 			if err != nil {
 				log.Printf("err getting user from token")
 				next.ServeHTTP(w, r)
@@ -91,7 +91,7 @@ var authExtractor = &request.MultiExtractor{
 
 func parseToken(r *http.Request) (*jwt.Token, error) {
 	jwtToken, err := request.ParseFromRequest(r, authExtractor, func(token *jwt.Token) (interface{}, error) {
-		t := []byte(os.Getenv("JWT_SECRET"))
+		t := []byte(os.Getenv("JWT_ACCESS_SECRET"))
 		return t, nil
 	})
 	return jwtToken, errors.Wrap(err, "parseToken error: ")
@@ -105,10 +105,10 @@ func GetCurrentUserFromCTX(ctx context.Context) (*model.User, error) {
 	}
 
 	fmt.Println(ctx.Value(CurrentUserKey))
-	user, ok := ctx.Value(CurrentUserKey).(model.User)
+	user, ok := ctx.Value(CurrentUserKey).(*model.User)
 	if !ok {
 		return nil, errNoUserInContext
 	}
 
-	return &user, nil
+	return user, nil
 }
