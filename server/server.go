@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
+	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
@@ -45,7 +46,7 @@ func main() {
 
 	// router.Use(middleware.RequestID)
 	// router.Use(middleware.Logger)
-	router.Use(graph.AuthMiddleware(resolver.DB))
+	router.Use(auth.AuthMiddleware(resolver.DB))
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))

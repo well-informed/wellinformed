@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
 )
@@ -19,7 +20,7 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	user, err := GetCurrentUserFromCTX(ctx)
+	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +154,7 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 }
 
 func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
-	currentUser, err := GetCurrentUserFromCTX(ctx)
+	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Printf("error while getting user feed: %v", err)
 		return nil, errors.New("You are not signed in!")
@@ -179,7 +180,7 @@ func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*mod
 }
 
 func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
-	currentUser, err := GetCurrentUserFromCTX(ctx)
+	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Printf("error while getting user feed: %v", err)
 		return nil, errors.New("You are not signed in!")

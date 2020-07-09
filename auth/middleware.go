@@ -1,4 +1,4 @@
-package graph
+package auth
 
 import (
 	"context"
@@ -26,10 +26,12 @@ var (
 func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Info("in the auth middleware")
 			token, err := parseToken(r)
 			_, cookieErr := r.Cookie("jid")
 
 			if err != nil {
+				log.Error("error with parseToken")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -37,7 +39,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			claims, ok := token.Claims.(jwt.MapClaims)
 
 			if !ok || !token.Valid {
-				log.Printf("token not valid")
+				log.Errorf("token not valid")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -45,28 +47,28 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			user, err := db.GetUserById(claims["jti"].(string))
 			// fmt.Println(user)
 			if err != nil {
-				log.Printf("err getting user from token")
+				log.Errorf("err getting user from token")
 				next.ServeHTTP(w, r)
 				return
 			}
 
 			// set the current user in context
 			ctx := context.WithValue(r.Context(), CurrentUserKey, user)
-
+			log.Infof("set ctx")
 			if cookieErr != nil {
 				refreshToken, err := user.GenRefreshToken()
 				if err != nil {
 					next.ServeHTTP(w, r)
 					return
 				}
-				log.Printf("refreshToken: %v", refreshToken.AccessToken)
+				log.Errorf("refreshToken: %v", refreshToken.AccessToken)
 				http.SetCookie(w, &http.Cookie{
 					Name:     "jid",
 					Value:    refreshToken.AccessToken,
 					HttpOnly: true,
 				})
 			}
-
+			log.Info("end of auth. ctx: ", ctx)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
