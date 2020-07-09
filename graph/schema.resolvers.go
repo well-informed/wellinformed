@@ -21,9 +21,9 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 
 	user, err := GetCurrentUserFromCTX(ctx)
 	if err != nil {
-		log.Error("user not in context. err: ", err)
 		return nil, err
 	}
+
 	existingFeed, err := r.DB.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
 		return nil, err
@@ -32,7 +32,6 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	if existingFeed != nil {
 		_, err := r.DB.InsertUserSubscription(*user, *existingFeed)
 		if err != nil {
-
 			return nil, err
 		}
 		return existingFeed, nil

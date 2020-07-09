@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
@@ -22,7 +23,7 @@ func NewDB() DB {
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
-	createTables(db)
+	createTables(db, tables)
 
 	return DB{db}
 }
@@ -32,11 +33,22 @@ func NewDB() DB {
 
 /*Creates all necessary tables, either returns successfully,
 or exits the program with call to log.Fatal()*/
-func createTables(db *sql.DB) {
-	createSrcRSSFeedsTable(db)
-	createContentItemsTable(db)
-	createUsersTable(db)
+func createTables(db *sql.DB, tables []table) {
+	for _, table := range tables {
+		createTable(db, table.name, table.sql)
+	}
+
+	// createSrcRSSFeedsTable(db)
+	// createContentItemsTable(db)
+	// createUsersTable(db)
 	// createUserHistoryTable(db)
+}
+
+func createTable(db *sql.DB, name string, stmt string) {
+	_, err := db.Exec(stmt)
+	if err != nil {
+		log.Fatalf("error creating table %v. err: %v", name, err)
+	}
 }
 
 func createSrcRSSFeedsTable(db *sql.DB) {
@@ -97,10 +109,29 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 }
 
 //TODO: complete implementation. Might be a good first candidate for an ORM.
-func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (*model.UserSubscription, error) {
-	log.Panic("not implemented")
-	return nil, nil
-	// stmt, err := db.Prepare(`INSERT INTO user_subscriptions`)
+func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subscription *model.UserSubscription, err error) {
+	stmt, err := db.Prepare(`INSERT INTO user_subscriptions
+	( user_id,
+		source_id,
+		created_at)
+		VALUES($1,$2,$3)
+		RETURNING id`)
+	if err != nil {
+		log.Error("failed to prepare user_subscriptions insert", err)
+		return nil, err
+	}
+	var id int64
+	err = stmt.QueryRow(
+		user.ID,
+		src.ID,
+		time.Now(),
+	).Scan(&id)
+	if err != nil {
+		log.Errorf("failed to insert row to user_subscriptions. err: ", err)
+		return nil, err
+	}
+	subscription.ID = id
+	return subscription, err
 }
 
 func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (model.User, error) {
@@ -200,31 +231,6 @@ func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, e
 	return &feed, err
 }
 
-func createContentItemsTable(db *sql.DB) {
-	stmt := `
-	CREATE TABLE IF NOT EXISTS content_items
- ( id BIGSERIAL PRIMARY KEY,
-	 source_id int NOT NULL REFERENCES src_rss_feeds(id),
-	 source_title varchar NOT NULL,
-	 source_link varchar NOT NULL,
-	 title varchar NOT NULL,
-	 description varchar,
-	 content varchar,
-	 link varchar NOT NULL,
-	 updated timestamp with time zone,
-	 published timestamp with time zone,
-	 author varchar,
-	 guid varchar NOT NULL,
-	 image_title varchar,
-	 image_url varchar,
-	 UNIQUE (source_id, link)
- )`
-	_, err := db.Exec(stmt)
-	if err != nil {
-		log.Fatal("error creating content_items table. err: ", err)
-	}
-}
-
 func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentItem, error) {
 	log.Debugf("about to insert item with source_id: %v, link: %v", contentItem.SourceID, contentItem.Link)
 	stmt, err := db.Prepare(`INSERT INTO content_items
@@ -312,22 +318,6 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 		return nil, err
 	}
 	return contentItems, nil
-}
-
-func createUsersTable(db *sql.DB) {
-	stmt := `
-	CREATE TABLE IF NOT EXISTS users
-	( id BIGSERIAL PRIMARY KEY,
-		email varchar,
-		first_name varchar,
-		last_name varchar,
-		user_name varchar,
-		password varchar)`
-
-	_, err := db.Exec(stmt)
-	if err != nil {
-		log.Fatal("error creating users table. err: ", err)
-	}
 }
 
 func createUserHistoryTable(db *sql.DB) {

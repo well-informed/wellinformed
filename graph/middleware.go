@@ -107,12 +107,14 @@ func GetCurrentUserFromCTX(ctx context.Context) (*model.User, error) {
 	errNoUserInContext := errors.New("no user in context")
 
 	if ctx.Value(CurrentUserKey) == nil {
+		log.Error(errNoUserInContext)
 		return nil, errNoUserInContext
 	}
 
 	fmt.Println(ctx.Value(CurrentUserKey))
 	user, ok := ctx.Value(CurrentUserKey).(model.User)
 	if !ok {
+		log.Error(errNoUserInContext)
 		return nil, errNoUserInContext
 	}
 
