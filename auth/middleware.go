@@ -30,7 +30,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			_, cookieErr := r.Cookie("jid")
 
 			if err != nil {
-				log.Error("error with parseToken")
+				log.Error("error with parseToken", err)
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -97,6 +97,7 @@ var authExtractor = &request.MultiExtractor{
 func parseToken(r *http.Request) (*jwt.Token, error) {
 	jwtToken, err := request.ParseFromRequest(r, authExtractor, func(token *jwt.Token) (interface{}, error) {
 		t := []byte(os.Getenv("JWT_SECRET"))
+		log.Info("jwt token is ", t)
 		return t, nil
 	})
 	return jwtToken, errors.Wrap(err, "parseToken error: ")
