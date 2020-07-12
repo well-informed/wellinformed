@@ -30,7 +30,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			_, cookieErr := r.Cookie("jid")
 
 			if err != nil {
-				log.Error("error with parseToken", err)
+				log.Error("error with parseToken: ", err)
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -53,6 +53,8 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 
 			// set the current user in context
 			ctx := context.WithValue(r.Context(), CurrentUserKey, user)
+
+			log.Infof("ctx value: %v", ctx.Value(CurrentUserKey))
 			if cookieErr != nil {
 				refreshToken, err := user.GenRefreshToken()
 				if err != nil {
@@ -66,6 +68,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 					HttpOnly: true,
 				})
 			}
+			log.Info("normal exit of authMiddleware")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -106,14 +109,14 @@ func GetCurrentUserFromCTX(ctx context.Context) (*model.User, error) {
 	errNoUserInContext := errors.New("no user in context")
 
 	if ctx.Value(CurrentUserKey) == nil {
-		log.Error(errNoUserInContext)
+		log.Error("current user key is empty.", errNoUserInContext)
 		return nil, errNoUserInContext
 	}
 
 	fmt.Println(ctx.Value(CurrentUserKey))
 	user, ok := ctx.Value(CurrentUserKey).(*model.User)
 	if !ok {
-		log.Error(errNoUserInContext)
+		log.Error("could not parse current user object.", errNoUserInContext)
 		return nil, errNoUserInContext
 	}
 
