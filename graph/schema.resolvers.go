@@ -17,9 +17,6 @@ import (
 )
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
@@ -30,6 +27,8 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 		return nil, err
 	}
 	log.Debug("existingFeed: ", existingFeed)
+	log.Debug("user: %v", user)
+
 	if existingFeed != nil {
 		_, err := r.DB.InsertUserSubscription(*user, *existingFeed)
 		if err != nil {

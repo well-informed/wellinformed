@@ -53,8 +53,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 
 			// set the current user in context
 			ctx := context.WithValue(r.Context(), CurrentUserKey, user)
-
-			log.Infof("ctx value: %v", ctx.Value(CurrentUserKey))
+			log.Debug("setting user context value to: ", user)
 			if cookieErr != nil {
 				refreshToken, err := user.GenRefreshToken()
 				if err != nil {
@@ -68,7 +67,6 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 					HttpOnly: true,
 				})
 			}
-			log.Info("normal exit of authMiddleware")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -115,10 +113,10 @@ func GetCurrentUserFromCTX(ctx context.Context) (*model.User, error) {
 
 	fmt.Println(ctx.Value(CurrentUserKey))
 	user, ok := ctx.Value(CurrentUserKey).(*model.User)
-	if !ok {
+	if !ok || user == nil {
 		log.Error("could not parse current user object.", errNoUserInContext)
 		return nil, errNoUserInContext
 	}
-
+	log.Debug("Got user from context: ", user)
 	return user, nil
 }

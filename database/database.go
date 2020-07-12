@@ -86,6 +86,7 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 
 //TODO: complete implementation. Might be a good first candidate for an ORM.
 func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subscription *model.UserSubscription, err error) {
+	subscription = &model.UserSubscription{}
 	stmt, err := db.Prepare(`INSERT INTO user_subscriptions
 	( user_id,
 		source_id,
