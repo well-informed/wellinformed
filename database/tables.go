@@ -39,7 +39,8 @@ var tables = []table{
 	( id BIGSERIAL PRIMARY KEY,
 		user_id int REFERENCES users(id),
 		source_id int REFERENCES src_rss_feeds(id),
-		created_at timestamp with time zone
+		created_at timestamp with time zone,
+		UNIQUE(user_id, source_id)
 	)`},
 	{
 		name: "content_items",

@@ -30,7 +30,6 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			_, cookieErr := r.Cookie("jid")
 
 			if err != nil {
-				log.Error("error with parseToken: ", err)
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -38,7 +37,6 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			claims, ok := token.Claims.(jwt.MapClaims)
 
 			if !ok || !token.Valid {
-				log.Errorf("token not valid")
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -46,16 +44,15 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			user, err := db.GetUserById(claims["jti"].(string))
 
 			if err != nil {
-				log.Errorf("err getting user from token")
 				next.ServeHTTP(w, r)
 				return
 			}
 
 			// set the current user in context
 			ctx := context.WithValue(r.Context(), CurrentUserKey, user)
-			log.Debug("setting user context value to: ", user)
+			log.Trace("setting user context value to: ", user)
 			if cookieErr != nil {
-				refreshToken, err := user.GenRefreshToken()
+				refreshToken, err := GenRefreshToken(user.ID)
 				if err != nil {
 					next.ServeHTTP(w, r)
 					return

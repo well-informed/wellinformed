@@ -9,4 +9,5 @@ import "github.com/well-informed/wellinformed"
 type Resolver struct {
 	DB  wellinformed.Persistor
 	RSS wellinformed.RSS
+	Sub wellinformed.Subscriber
 }

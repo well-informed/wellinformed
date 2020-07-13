@@ -9,7 +9,10 @@ import (
 type Persistor interface {
 	InsertSrcRSSFeed(model.SrcRSSFeed) (*model.SrcRSSFeed, error)
 	SelectSrcRSSFeed(model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
+	ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error)
+	ListSrcRSSFeedsByUser(*model.User) ([]*model.SrcRSSFeed, error)
 	InsertUserSubscription(model.User, model.SrcRSSFeed) (*model.UserSubscription, error)
+	SelectUserSubscription(int64, int64) (*model.UserSubscription, error)
 	InsertContentItem(model.ContentItem) (*model.ContentItem, error)
 	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
 	GetUserByEmail(string) (*model.User, error)
@@ -20,5 +23,9 @@ type Persistor interface {
 
 type RSS interface {
 	FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSSFeed, []*model.ContentItem, error)
-	WatchSrcFeed(feedLink string) error
+}
+
+type Subscriber interface {
+	SubscribeToRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
+	AddUserSubscription(user *model.User, srcRSSFeed *model.SrcRSSFeed) (*model.UserSubscription, error)
 }

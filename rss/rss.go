@@ -33,11 +33,6 @@ func (rss *RSS) FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSS
 	return *convertedFeed, contentItems, nil
 }
 
-func (rss *RSS) WatchSrcFeed(feedLink string) error {
-	log.Panic("not implemented")
-	return nil
-}
-
 func convertToModelFeed(feed *gofeed.Feed) *model.SrcRSSFeed {
 	modelFeed := &model.SrcRSSFeed{
 		Title:         feed.Title,

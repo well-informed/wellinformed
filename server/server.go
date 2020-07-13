@@ -19,6 +19,7 @@ import (
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
 	"github.com/well-informed/wellinformed/rss"
+	"github.com/well-informed/wellinformed/subscriber"
 )
 
 const defaultPort = "8080"
@@ -31,9 +32,17 @@ func main() {
 		port = defaultPort
 	}
 
+	db := database.NewDB()
+	rss := rss.NewRSS()
+	sub, err := subscriber.NewSubscriber(rss, db)
+	if err != nil {
+		log.Fatal("couldn't initialize new subscriber properly")
+	}
+
 	resolver := &graph.Resolver{
-		DB:  database.NewDB(),
-		RSS: rss.NewRSS(),
+		DB:  db,
+		RSS: rss,
+		Sub: sub,
 	}
 
 	router := chi.NewRouter()
@@ -94,8 +103,8 @@ func main() {
 			return
 		}
 
-		refreshToken, err := user.GenRefreshToken()
-		accessToken, err := user.GenAccessToken()
+		refreshToken, err := auth.GenRefreshToken(user.ID)
+		accessToken, err := auth.GenAccessToken(user.ID)
 
 		// check token version maybe here?
 

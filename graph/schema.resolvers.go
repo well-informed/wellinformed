@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -30,33 +29,21 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	log.Debug("user: %v", user)
 
 	if existingFeed != nil {
-		_, err := r.DB.InsertUserSubscription(*user, *existingFeed)
+		_, err := r.Sub.AddUserSubscription(user, existingFeed)
 		if err != nil {
-			return nil, err
+			return existingFeed, err
 		}
 		return existingFeed, nil
 	}
-	//TODO: might want to wrap all this in a db transaction
-	log.Debug("passed select, fetching feed")
-	feed, contentItems, err := r.RSS.FetchSrcFeed(feedLink, ctx)
-	if err != nil {
-		log.Errorf("couldn't fetch SrcFeed in order to add it.")
-		return nil, err
-	}
-	insertedFeed, err := r.DB.InsertSrcRSSFeed(feed)
+	insertedFeed, err := r.Sub.SubscribeToRSSFeed(ctx, feedLink)
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.DB.InsertUserSubscription(*user, *insertedFeed)
+	_, err = r.Sub.AddUserSubscription(user, insertedFeed)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("inserted feed ID: ", insertedFeed.ID)
-	for _, item := range contentItems {
 
-		item.SourceID = insertedFeed.ID
-		r.DB.InsertContentItem(*item)
-	}
 	return insertedFeed, nil
 }
 
@@ -87,12 +74,13 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		Lastname:  input.Lastname,
 	}
 
-	err = user.HashPassword(input.Password)
+	hashedPassword, err := auth.HashPassword(input.Password)
 	if err != nil {
 		log.Printf("error while hashing password: %v", err)
 		return nil, errors.New("something went wrong")
 	}
 
+	user.Password = hashedPassword
 	createdUser, err := r.DB.CreateUser(*user)
 
 	if err != nil {
@@ -100,7 +88,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, err
 	}
 
-	token, err := user.GenAccessToken()
+	token, err := auth.GenAccessToken(user.ID)
 	if err != nil {
 		log.Printf("error while generating the token: %v", err)
 		return nil, errors.New("something went wrong")
@@ -122,13 +110,13 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		return nil, errors.New("email/password combination don't work 1")
 	}
 
-	err = existingUser.ComparePassword(input.Password)
+	err = auth.ComparePassword(input.Password, existingUser.Password)
 	if err != nil {
 		log.Printf("ComparePassword err: %v", err)
 		return nil, errors.New("email/password combination don't work 2")
 	}
 
-	accessToken, err := existingUser.GenAccessToken()
+	accessToken, err := auth.GenAccessToken(existingUser.ID)
 	// refreshToken, rerr := user.GenRefreshToken()
 	if err != nil {
 		return nil, errors.New("something went wrong")
@@ -145,7 +133,6 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	defer cancel()
 
 	feed, err := r.DB.SelectSrcRSSFeed(*input)
-	log.Debug("after db select")
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +162,7 @@ func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSS
 }
 
 func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.DB.ListSrcRSSFeedsByUser(obj)
 }
 
 func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {

@@ -28,9 +28,6 @@ func NewDB() DB {
 	return DB{db}
 }
 
-//TODO: Write Insert, Delete, Update, and Read statements for all the entities in here.
-//Use the graph models as input
-
 /*Creates all necessary tables, either returns successfully,
 or exits the program with call to log.Fatal()*/
 func createTables(db *sql.DB, tables []table) {
@@ -84,7 +81,6 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 	return &feed, nil
 }
 
-//TODO: complete implementation. Might be a good first candidate for an ORM.
 func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subscription *model.UserSubscription, err error) {
 	subscription = &model.UserSubscription{}
 	stmt, err := db.Prepare(`INSERT INTO user_subscriptions
@@ -109,6 +105,22 @@ func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subs
 	}
 	subscription.ID = id
 	return subscription, err
+}
+
+func (db DB) SelectUserSubscription(userID int64, srcID int64) (*model.UserSubscription, error) {
+	var userSub model.UserSubscription
+
+	stmt := `SELECT * FROM user_subscriptions WHERE user_id = $1 AND source_id = $2`
+	err := db.QueryRow(stmt, userID, srcID).Scan(
+		&userSub.ID,
+		&userSub.UserID,
+		&userSub.SrcRSSFeed,
+		&userSub.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &userSub, err
 }
 
 func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (*model.User, error) {
@@ -212,6 +224,51 @@ func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, e
 	return &feed, err
 }
 
+func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
+	//Need to write this manually now...in order to select only the fields from the first table
+	return db.ListSrcRSSFeedsByField(`INNER JOIN user_subscriptions
+	ON src_rss_feeds.id = user_subscriptions.source_id
+	WHERE user_subscriptions.user_id = $1`, user.ID)
+}
+
+func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
+	return db.ListSrcRSSFeedsByField("")
+}
+
+func (db DB) ListSrcRSSFeedsByField(whereClause string, args ...interface{}) ([]*model.SrcRSSFeed, error) {
+	stmt := `SELECT * FROM src_rss_feeds ` + whereClause
+	rows, err := db.Query(stmt, args...)
+	defer rows.Close()
+	if err != nil {
+		log.Error("error selecting all srcRSSFeeds. err: ", err)
+		return nil, err
+	}
+	feeds := make([]*model.SrcRSSFeed, 0)
+	for rows.Next() {
+		var feed model.SrcRSSFeed
+		err := rows.Scan(
+			&feed.ID,
+			&feed.Title,
+			&feed.Description,
+			&feed.Link,
+			&feed.FeedLink,
+			&feed.Updated,
+			&feed.LastFetchedAt,
+			&feed.Language,
+			&feed.Generator,
+		)
+		if err != nil {
+			log.Error("error scanning srcFeed row: err: ", err)
+		}
+		feeds = append(feeds, &feed)
+	}
+	if err := rows.Err(); err != nil {
+		log.Error("error listing srcRSSFeeds. err: ", err)
+		return nil, err
+	}
+	return feeds, nil
+}
+
 func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentItem, error) {
 	log.Debugf("about to insert item with source_id: %v, link: %v", contentItem.SourceID, contentItem.Link)
 	stmt, err := db.Prepare(`INSERT INTO content_items
@@ -263,11 +320,11 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 	log.Debug("received query with src feed object: ", src)
 	stmt := `SELECT * FROM content_items WHERE source_id = $1`
 	rows, err := db.Query(stmt, src.ID)
+	defer rows.Close()
 	if err != nil {
 		log.Error("Error selecting content items by source from db. err: ", err)
 		return nil, err
 	}
-	defer rows.Close()
 	contentItems := make([]*model.ContentItem, 0)
 	for rows.Next() {
 		var contentItem model.ContentItem
@@ -301,54 +358,54 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 	return contentItems, nil
 }
 
-func createUserHistoryTable(db *sql.DB) {
-	stmt := `
-	CREATE TABLE IF NOT EXISTS user_history
-	( userID varchar,
-		parent_feed varchar,
-		guid varchar,
-		trustworthiness smallint,
-		insightfulness smallint,
-		entertainment smallint,
-		importance smallint,
-		overall smallint,
-		notes text,
-		FOREIGN KEY (userID) REFERENCES users(userID),
-		FOREIGN KEY (parent_feed, guid) REFERENCES main_feed(parent_feed, guid),
-		PRIMARY KEY (userID, parent_feed, guid)
-		)`
-	_, err := db.Exec(stmt)
-	if err != nil {
-		log.Fatal("error creating history table. err: ", err)
-	}
-}
+// func createUserHistoryTable(db *sql.DB) {
+// 	stmt := `
+// 	CREATE TABLE IF NOT EXISTS user_history
+// 	( userID varchar,
+// 		parent_feed varchar,
+// 		guid varchar,
+// 		trustworthiness smallint,
+// 		insightfulness smallint,
+// 		entertainment smallint,
+// 		importance smallint,
+// 		overall smallint,
+// 		notes text,
+// 		FOREIGN KEY (userID) REFERENCES users(userID),
+// 		FOREIGN KEY (parent_feed, guid) REFERENCES main_feed(parent_feed, guid),
+// 		PRIMARY KEY (userID, parent_feed, guid)
+// 		)`
+// 	_, err := db.Exec(stmt)
+// 	if err != nil {
+// 		log.Fatal("error creating history table. err: ", err)
+// 	}
+// }
 
-func createUserPrefSetTable(db *sql.DB) {
-	stmt := `
-	CREATE TABLE IF NOT EXISTS preference_sets
-	( userID varchar,
-		pref_set_name varchar,
-		FOREIGN KEY (userID) REFERENCES users(userID),
-		PRIMARY KEY (userID, pref_set_name)
-	)`
-	_, err := db.Exec(stmt)
-	if err != nil {
-		log.Fatal("error creating preference_sets table. err: ", err)
-	}
-}
+// func createUserPrefSetTable(db *sql.DB) {
+// 	stmt := `
+// 	CREATE TABLE IF NOT EXISTS preference_sets
+// 	( userID varchar,
+// 		pref_set_name varchar,
+// 		FOREIGN KEY (userID) REFERENCES users(userID),
+// 		PRIMARY KEY (userID, pref_set_name)
+// 	)`
+// 	_, err := db.Exec(stmt)
+// 	if err != nil {
+// 		log.Fatal("error creating preference_sets table. err: ", err)
+// 	}
+// }
 
-func createUserSourcesTable(db *sql.DB) {
-	stmt := `
-	CREATE TABLE IF NOT EXISTS user_sources
-	( userID varchar,
-		pref_set_name varchar,
-		source varchar,
-		FOREIGN KEY (userID, pref_set_name) REFERENCES preference_sets(userID, pref_set_name),
-		FOREIGN KEY (source) REFERENCES src_rss_feeds(link)
-		PRIMARY KEY (userID, pref_set_name, source)
-	)`
-	_, err := db.Exec(stmt)
-	if err != nil {
-		log.Fatal("error creating user_sources table. err: ", err)
-	}
-}
+// func createUserSourcesTable(db *sql.DB) {
+// 	stmt := `
+// 	CREATE TABLE IF NOT EXISTS user_sources
+// 	( userID varchar,
+// 		pref_set_name varchar,
+// 		source varchar,
+// 		FOREIGN KEY (userID, pref_set_name) REFERENCES preference_sets(userID, pref_set_name),
+// 		FOREIGN KEY (source) REFERENCES src_rss_feeds(link)
+// 		PRIMARY KEY (userID, pref_set_name, source)
+// 	)`
+// 	_, err := db.Exec(stmt)
+// 	if err != nil {
+// 		log.Fatal("error creating user_sources table. err: ", err)
+// 	}
+// }
