@@ -19,7 +19,6 @@ type subscriber struct {
 //NewSubscriber provides a persistent service that allows the application to regularly check for updates to
 //subscribed RSS feeds
 func NewSubscriber(rss wellinformed.RSS, db wellinformed.Persistor) (*subscriber, error) {
-	//TODO load subscriptions
 	sub := &subscriber{
 		rss:            rss,
 		db:             db,
@@ -85,7 +84,6 @@ func (sub *subscriber) updateSrcRSSFeed(ctx context.Context, feedLink string) (*
 		return nil, err
 	}
 	var storedFeed *model.SrcRSSFeed
-	//TODO: Check for existing feed definition before attempting insert
 	storedFeed, err = sub.db.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
 		return nil, err

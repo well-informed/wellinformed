@@ -47,8 +47,6 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 }
 
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
-	// TODO: add validation on input
-
 	existingUser, err := r.DB.GetUserByEmail(input.Email)
 
 	if err != nil {
