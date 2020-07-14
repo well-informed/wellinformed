@@ -29,3 +29,7 @@ type Subscriber interface {
 	SubscribeToRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
 	AddUserSubscription(user *model.User, srcRSSFeed *model.SrcRSSFeed) (*model.UserSubscription, error)
 }
+
+type FeedService interface {
+	Serve(ctx context.Context, user *model.User) (*model.UserFeed, error)
+}

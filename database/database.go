@@ -226,17 +226,19 @@ func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, e
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
 	//Need to write this manually now...in order to select only the fields from the first table
-	return db.ListSrcRSSFeedsByField(`INNER JOIN user_subscriptions
+	//Maybe there's a way to only select some fields?
+	return db.ListSrcRSSFeedsByQuery(`SELECT src_rss_feeds.*
+	FROM src_rss_feeds
+	INNER JOIN user_subscriptions
 	ON src_rss_feeds.id = user_subscriptions.source_id
 	WHERE user_subscriptions.user_id = $1`, user.ID)
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
-	return db.ListSrcRSSFeedsByField("")
+	return db.ListSrcRSSFeedsByQuery(`SELECT * FROM src_rss_feeds`)
 }
 
-func (db DB) ListSrcRSSFeedsByField(whereClause string, args ...interface{}) ([]*model.SrcRSSFeed, error) {
-	stmt := `SELECT * FROM src_rss_feeds ` + whereClause
+func (db DB) ListSrcRSSFeedsByQuery(stmt string, args ...interface{}) ([]*model.SrcRSSFeed, error) {
 	rows, err := db.Query(stmt, args...)
 	defer rows.Close()
 	if err != nil {

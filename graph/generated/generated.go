@@ -657,7 +657,7 @@ type UserSubscription {
 }
 
 type UserFeed {
-  userID: String!
+  userID: ID!
   name: String!
   contentItems: [ContentItem!]!
 }
@@ -2449,9 +2449,9 @@ func (ec *executionContext) _UserFeed_userID(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserFeed_name(ctx context.Context, field graphql.CollectedField, obj *model.UserFeed) (ret graphql.Marshaler) {

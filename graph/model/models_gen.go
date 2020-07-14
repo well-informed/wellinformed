@@ -55,7 +55,7 @@ type SrcRSSFeedInput struct {
 }
 
 type UserFeed struct {
-	UserID       string         `json:"userID"`
+	UserID       int64          `json:"userID"`
 	Name         string         `json:"name"`
 	ContentItems []*ContentItem `json:"contentItems"`
 }

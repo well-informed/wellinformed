@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -146,10 +145,16 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 		return nil, errors.New("You are not signed in!")
 	}
 	log.Printf("currentUser: %v", currentUser)
-	return &model.UserFeed{
-		UserID: strconv.FormatInt(currentUser.ID, 10),
-		Name:   "it's a user feed!",
-	}, nil
+	return r.Feed.Serve(ctx, currentUser)
+}
+
+func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
+	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user feed: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+	return currentUser, nil
 }
 
 func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
@@ -163,15 +168,6 @@ func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSS
 
 func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error) {
 	return r.DB.ListSrcRSSFeedsByUser(obj)
-}
-
-func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
-	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		log.Printf("error while getting user feed: %v", err)
-		return nil, errors.New("You are not signed in!")
-	}
-	return currentUser, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -190,10 +186,3 @@ type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.

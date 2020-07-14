@@ -15,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
+	feed "github.com/well-informed/wellinformed/feedService"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
@@ -38,11 +39,13 @@ func main() {
 	if err != nil {
 		log.Fatal("couldn't initialize new subscriber properly")
 	}
+	feedService := feed.NewFeedService(db)
 
 	resolver := &graph.Resolver{
-		DB:  db,
-		RSS: rss,
-		Sub: sub,
+		DB:   db,
+		RSS:  rss,
+		Sub:  sub,
+		Feed: feedService,
 	}
 
 	router := chi.NewRouter()

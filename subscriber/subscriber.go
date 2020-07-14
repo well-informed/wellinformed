@@ -51,6 +51,7 @@ func (sub *subscriber) loadSubscriptions() error {
 		return err
 	}
 	for _, srcRSSFeed := range srcRSSFeeds {
+		go sub.updateSrcRSSFeed(context.Background(), srcRSSFeed.FeedLink)
 		sub.subscriptions <- *srcRSSFeed
 	}
 	return nil
@@ -83,18 +84,26 @@ func (sub *subscriber) updateSrcRSSFeed(ctx context.Context, feedLink string) (*
 		log.Errorf("couldn't fetch SrcFeed in order to add it.")
 		return nil, err
 	}
+	var storedFeed *model.SrcRSSFeed
 	//TODO: Check for existing feed definition before attempting insert
-	insertedFeed, err := sub.db.InsertSrcRSSFeed(feed)
+	storedFeed, err = sub.db.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("inserted feed ID: ", insertedFeed.ID)
+	if storedFeed == nil {
+		storedFeed, err = sub.db.InsertSrcRSSFeed(feed)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	log.Debug("stored feed ID: ", storedFeed.ID)
 	for _, item := range contentItems {
 
-		item.SourceID = insertedFeed.ID
+		item.SourceID = storedFeed.ID
 		sub.db.InsertContentItem(*item)
 	}
-	return insertedFeed, nil
+	return storedFeed, nil
 }
 
 func (sub *subscriber) AddUserSubscription(user *model.User, srcRSSFeed *model.SrcRSSFeed) (*model.UserSubscription, error) {
