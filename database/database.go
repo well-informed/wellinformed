@@ -315,7 +315,9 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 		log.Errorf("failed to insert row to content_items. err: ", err)
 		return nil, err
 	}
+	//May return a zero ID if duplicate entry already exists
 	contentItem.ID = id
+	log.Debug("contentItem.ID: ", contentItem.ID)
 	return &contentItem, nil
 }
 
