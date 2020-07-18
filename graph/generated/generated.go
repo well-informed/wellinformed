@@ -38,6 +38,8 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	SrcRSSFeed() SrcRSSFeedResolver
+	User() UserResolver
 }
 
 type DirectiveRoot struct {
@@ -55,8 +57,10 @@ type ComplexityRoot struct {
 	}
 
 	ContentItem struct {
+		Author      func(childComplexity int) int
 		Content     func(childComplexity int) int
 		Description func(childComplexity int) int
+		GUID        func(childComplexity int) int
 		ID          func(childComplexity int) int
 		ImageTitle  func(childComplexity int) int
 		ImageURL    func(childComplexity int) int
@@ -83,6 +87,7 @@ type ComplexityRoot struct {
 	}
 
 	SrcRSSFeed struct {
+		ContentItems  func(childComplexity int) int
 		Description   func(childComplexity int) int
 		FeedLink      func(childComplexity int) int
 		Generator     func(childComplexity int) int
@@ -95,21 +100,29 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		CreatedAt func(childComplexity int) int
-		Email     func(childComplexity int) int
-		Feed      func(childComplexity int) int
-		Firstname func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Lastname  func(childComplexity int) int
-		Password  func(childComplexity int) int
-		UpdatedAt func(childComplexity int) int
-		Username  func(childComplexity int) int
+		CreatedAt   func(childComplexity int) int
+		Email       func(childComplexity int) int
+		Feed        func(childComplexity int) int
+		Firstname   func(childComplexity int) int
+		ID          func(childComplexity int) int
+		Lastname    func(childComplexity int) int
+		Password    func(childComplexity int) int
+		SrcRSSFeeds func(childComplexity int) int
+		UpdatedAt   func(childComplexity int) int
+		Username    func(childComplexity int) int
 	}
 
 	UserFeed struct {
 		ContentItems func(childComplexity int) int
 		Name         func(childComplexity int) int
 		UserID       func(childComplexity int) int
+	}
+
+	UserSubscription struct {
+		CreatedAt  func(childComplexity int) int
+		ID         func(childComplexity int) int
+		SrcRSSFeed func(childComplexity int) int
+		UserID     func(childComplexity int) int
 	}
 }
 
@@ -122,6 +135,12 @@ type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context) (*model.UserFeed, error)
 	GetUser(ctx context.Context) (*model.User, error)
+}
+type SrcRSSFeedResolver interface {
+	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
+}
+type UserResolver interface {
+	SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error)
 }
 
 type executableSchema struct {
@@ -167,6 +186,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AuthToken.ExpiredAt(childComplexity), true
 
+	case "ContentItem.author":
+		if e.complexity.ContentItem.Author == nil {
+			break
+		}
+
+		return e.complexity.ContentItem.Author(childComplexity), true
+
 	case "ContentItem.content":
 		if e.complexity.ContentItem.Content == nil {
 			break
@@ -180,6 +206,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ContentItem.Description(childComplexity), true
+
+	case "ContentItem.guid":
+		if e.complexity.ContentItem.GUID == nil {
+			break
+		}
+
+		return e.complexity.ContentItem.GUID(childComplexity), true
 
 	case "ContentItem.id":
 		if e.complexity.ContentItem.ID == nil {
@@ -320,6 +353,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.UserFeed(childComplexity), true
 
+	case "SrcRSSFeed.contentItems":
+		if e.complexity.SrcRSSFeed.ContentItems == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeed.ContentItems(childComplexity), true
+
 	case "SrcRSSFeed.description":
 		if e.complexity.SrcRSSFeed.Description == nil {
 			break
@@ -432,6 +472,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Password(childComplexity), true
 
+	case "User.srcRSSFeeds":
+		if e.complexity.User.SrcRSSFeeds == nil {
+			break
+		}
+
+		return e.complexity.User.SrcRSSFeeds(childComplexity), true
+
 	case "User.updatedAt":
 		if e.complexity.User.UpdatedAt == nil {
 			break
@@ -466,6 +513,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.UserFeed.UserID(childComplexity), true
+
+	case "UserSubscription.createdAt":
+		if e.complexity.UserSubscription.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.UserSubscription.CreatedAt(childComplexity), true
+
+	case "UserSubscription.id":
+		if e.complexity.UserSubscription.ID == nil {
+			break
+		}
+
+		return e.complexity.UserSubscription.ID(childComplexity), true
+
+	case "UserSubscription.srcRSSFeed":
+		if e.complexity.UserSubscription.SrcRSSFeed == nil {
+			break
+		}
+
+		return e.complexity.UserSubscription.SrcRSSFeed(childComplexity), true
+
+	case "UserSubscription.userID":
+		if e.complexity.UserSubscription.UserID == nil {
+			break
+		}
+
+		return e.complexity.UserSubscription.UserID(childComplexity), true
 
 	}
 	return 0, false
@@ -531,7 +606,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	&ast.Source{Name: "graph/schema.graphqls", Input: `scalar Time
+	&ast.Source{Name: "graph/schema.graphql", Input: `scalar Time
 
 type AuthToken {
   accessToken: String!
@@ -553,11 +628,12 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
+  contentItems: [ContentItem!]!
 }
 
 type ContentItem {
   id: ID!
-  sourceID: String!
+  sourceID: ID!
   sourceTitle: String!
   sourceLink: String!
   title: String!
@@ -566,13 +642,22 @@ type ContentItem {
   link: String!
   updated: Time
   published: Time
+  author: String
+  guid: String
   imageTitle: String
   imageURL: String
   sourceType: String!
 }
 
+type UserSubscription {
+  id: ID!
+  userID: ID!
+  srcRSSFeed: ID!
+  createdAt: Time!
+}
+
 type UserFeed {
-  userID: String!
+  userID: ID!
   name: String!
   contentItems: [ContentItem!]!
 }
@@ -587,6 +672,7 @@ type User {
   feed: UserFeed!
   createdAt: Time!
   updatedAt: Time!
+  srcRSSFeeds: [SrcRSSFeed!]!
 }
 
 input SrcRSSFeedInput {
@@ -933,9 +1019,9 @@ func (ec *executionContext) _ContentItem_sourceID(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ContentItem_sourceTitle(ctx context.Context, field graphql.CollectedField, obj *model.ContentItem) (ret graphql.Marshaler) {
@@ -1202,6 +1288,68 @@ func (ec *executionContext) _ContentItem_published(ctx context.Context, field gr
 	res := resTmp.(*time.Time)
 	fc.Result = res
 	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItem_author(ctx context.Context, field graphql.CollectedField, obj *model.ContentItem) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItem",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Author, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItem_guid(ctx context.Context, field graphql.CollectedField, obj *model.ContentItem) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItem",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GUID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ContentItem_imageTitle(ctx context.Context, field graphql.CollectedField, obj *model.ContentItem) (ret graphql.Marshaler) {
@@ -1898,6 +2046,40 @@ func (ec *executionContext) _SrcRSSFeed_generator(ctx context.Context, field gra
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _SrcRSSFeed_contentItems(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeed",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.SrcRSSFeed().ContentItems(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.ContentItem)
+	fc.Result = res
+	return ec.marshalNContentItem2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2204,6 +2386,40 @@ func (ec *executionContext) _User_updatedAt(ctx context.Context, field graphql.C
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _User_srcRSSFeeds(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().SrcRSSFeeds(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SrcRSSFeed)
+	fc.Result = res
+	return ec.marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _UserFeed_userID(ctx context.Context, field graphql.CollectedField, obj *model.UserFeed) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2233,9 +2449,9 @@ func (ec *executionContext) _UserFeed_userID(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserFeed_name(ctx context.Context, field graphql.CollectedField, obj *model.UserFeed) (ret graphql.Marshaler) {
@@ -2304,6 +2520,142 @@ func (ec *executionContext) _UserFeed_contentItems(ctx context.Context, field gr
 	res := resTmp.([]*model.ContentItem)
 	fc.Result = res
 	return ec.marshalNContentItem2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserSubscription_id(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNID2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserSubscription_userID(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UserID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNID2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserSubscription_srcRSSFeed(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SrcRSSFeed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNID2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserSubscription_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserSubscription",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -3590,6 +3942,10 @@ func (ec *executionContext) _ContentItem(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = ec._ContentItem_updated(ctx, field, obj)
 		case "published":
 			out.Values[i] = ec._ContentItem_published(ctx, field, obj)
+		case "author":
+			out.Values[i] = ec._ContentItem_author(ctx, field, obj)
+		case "guid":
+			out.Values[i] = ec._ContentItem_guid(ctx, field, obj)
 		case "imageTitle":
 			out.Values[i] = ec._ContentItem_imageTitle(ctx, field, obj)
 		case "imageURL":
@@ -3737,39 +4093,53 @@ func (ec *executionContext) _SrcRSSFeed(ctx context.Context, sel ast.SelectionSe
 		case "id":
 			out.Values[i] = ec._SrcRSSFeed_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._SrcRSSFeed_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "description":
 			out.Values[i] = ec._SrcRSSFeed_description(ctx, field, obj)
 		case "link":
 			out.Values[i] = ec._SrcRSSFeed_link(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "feedLink":
 			out.Values[i] = ec._SrcRSSFeed_feedLink(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "updated":
 			out.Values[i] = ec._SrcRSSFeed_updated(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "lastFetchedAt":
 			out.Values[i] = ec._SrcRSSFeed_lastFetchedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "language":
 			out.Values[i] = ec._SrcRSSFeed_language(ctx, field, obj)
 		case "generator":
 			out.Values[i] = ec._SrcRSSFeed_generator(ctx, field, obj)
+		case "contentItems":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SrcRSSFeed_contentItems(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3795,48 +4165,62 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._User_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "firstname":
 			out.Values[i] = ec._User_firstname(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "lastname":
 			out.Values[i] = ec._User_lastname(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "username":
 			out.Values[i] = ec._User_username(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "email":
 			out.Values[i] = ec._User_email(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "password":
 			out.Values[i] = ec._User_password(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "feed":
 			out.Values[i] = ec._User_feed(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._User_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "updatedAt":
 			out.Values[i] = ec._User_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "srcRSSFeeds":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_srcRSSFeeds(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3871,6 +4255,48 @@ func (ec *executionContext) _UserFeed(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "contentItems":
 			out.Values[i] = ec._UserFeed_contentItems(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var userSubscriptionImplementors = []string{"UserSubscription"}
+
+func (ec *executionContext) _UserSubscription(ctx context.Context, sel ast.SelectionSet, obj *model.UserSubscription) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userSubscriptionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserSubscription")
+		case "id":
+			out.Values[i] = ec._UserSubscription_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "userID":
+			out.Values[i] = ec._UserSubscription_userID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "srcRSSFeed":
+			out.Values[i] = ec._UserSubscription_srcRSSFeed(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createdAt":
+			out.Values[i] = ec._UserSubscription_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4247,6 +4673,43 @@ func (ec *executionContext) unmarshalNRegisterInput2githubᚗcomᚋwellᚑinform
 
 func (ec *executionContext) marshalNSrcRSSFeed2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx context.Context, sel ast.SelectionSet, v model.SrcRSSFeed) graphql.Marshaler {
 	return ec._SrcRSSFeed(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SrcRSSFeed) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx context.Context, sel ast.SelectionSet, v *model.SrcRSSFeed) graphql.Marshaler {

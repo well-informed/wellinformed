@@ -13,11 +13,14 @@ import (
 	"github.com/go-chi/render"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
+	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
+	feed "github.com/well-informed/wellinformed/feedService"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
 	"github.com/well-informed/wellinformed/rss"
+	"github.com/well-informed/wellinformed/subscriber"
 )
 
 const defaultPort = "8080"
@@ -30,9 +33,19 @@ func main() {
 		port = defaultPort
 	}
 
+	db := database.NewDB()
+	rss := rss.NewRSS()
+	sub, err := subscriber.NewSubscriber(rss, db)
+	if err != nil {
+		log.Fatal("couldn't initialize new subscriber properly")
+	}
+	feedService := feed.NewFeedService(db)
+
 	resolver := &graph.Resolver{
-		DB:  database.NewDB(),
-		RSS: rss.NewRSS(),
+		DB:   db,
+		RSS:  rss,
+		Sub:  sub,
+		Feed: feedService,
 	}
 
 	router := chi.NewRouter()
@@ -45,7 +58,7 @@ func main() {
 
 	// router.Use(middleware.RequestID)
 	// router.Use(middleware.Logger)
-	router.Use(graph.AuthMiddleware(resolver.DB))
+	router.Use(auth.AuthMiddleware(resolver.DB))
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
@@ -93,8 +106,8 @@ func main() {
 			return
 		}
 
-		refreshToken, err := user.GenRefreshToken()
-		accessToken, err := user.GenAccessToken()
+		refreshToken, err := auth.GenRefreshToken(user.ID)
+		accessToken, err := auth.GenAccessToken(user.ID)
 
 		// check token version maybe here?
 

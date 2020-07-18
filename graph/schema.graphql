@@ -20,11 +20,12 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
+  contentItems: [ContentItem!]!
 }
 
 type ContentItem {
   id: ID!
-  sourceID: String!
+  sourceID: ID!
   sourceTitle: String!
   sourceLink: String!
   title: String!
@@ -33,13 +34,22 @@ type ContentItem {
   link: String!
   updated: Time
   published: Time
+  author: String
+  guid: String
   imageTitle: String
   imageURL: String
   sourceType: String!
 }
 
+type UserSubscription {
+  id: ID!
+  userID: ID!
+  srcRSSFeed: ID!
+  createdAt: Time!
+}
+
 type UserFeed {
-  userID: String!
+  userID: ID!
   name: String!
   contentItems: [ContentItem!]!
 }
@@ -54,6 +64,7 @@ type User {
   feed: UserFeed!
   createdAt: Time!
   updatedAt: Time!
+  srcRSSFeeds: [SrcRSSFeed!]!
 }
 
 input SrcRSSFeedInput {
