@@ -318,6 +318,33 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 	return &contentItem, nil
 }
 
+func (db DB) SelectContentItem(id int64) (*model.ContentItem, error) {
+	stmt := `SELECT * FROM content_items WHERE id = $1`
+
+	var contentItem model.ContentItem
+	err := db.QueryRow(stmt, id).Scan(
+		&contentItem.ID,
+		&contentItem.SourceID,
+		&contentItem.SourceTitle,
+		&contentItem.SourceLink,
+		&contentItem.Title,
+		&contentItem.Description,
+		&contentItem.Content,
+		&contentItem.Link,
+		&contentItem.Updated,
+		&contentItem.Published,
+		&contentItem.Author,
+		&contentItem.GUID,
+		&contentItem.ImageTitle,
+		&contentItem.ImageURL,
+	)
+	if err != nil {
+		log.Errorf("failed to select content_item. err: err")
+		return nil, err
+	}
+	return &contentItem, nil
+}
+
 func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("received query with src feed object: ", src)
 	stmt := `SELECT * FROM content_items WHERE source_id = $1`

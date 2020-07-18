@@ -13,6 +13,7 @@ type Persistor interface {
 	ListSrcRSSFeedsByUser(*model.User) ([]*model.SrcRSSFeed, error)
 	InsertUserSubscription(model.User, model.SrcRSSFeed) (*model.UserSubscription, error)
 	SelectUserSubscription(int64, int64) (*model.UserSubscription, error)
+	SelectContentItem(int64) (*model.ContentItem, error)
 	InsertContentItem(model.ContentItem) (*model.ContentItem, error)
 	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
 	GetUserByEmail(string) (*model.User, error)
