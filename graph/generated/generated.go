@@ -81,9 +81,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetUser    func(childComplexity int) int
-		SrcRSSFeed func(childComplexity int, input *model.SrcRSSFeedInput) int
-		UserFeed   func(childComplexity int) int
+		GetContentItem func(childComplexity int, input int64) int
+		GetUser        func(childComplexity int) int
+		SrcRSSFeed     func(childComplexity int, input *model.SrcRSSFeedInput) int
+		UserFeed       func(childComplexity int) int
 	}
 
 	SrcRSSFeed struct {
@@ -135,6 +136,7 @@ type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context) (*model.UserFeed, error)
 	GetUser(ctx context.Context) (*model.User, error)
+	GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error)
 }
 type SrcRSSFeedResolver interface {
 	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
@@ -326,6 +328,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Register(childComplexity, args["input"].(model.RegisterInput)), true
+
+	case "Query.getContentItem":
+		if e.complexity.Query.GetContentItem == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getContentItem_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetContentItem(childComplexity, args["input"].(int64)), true
 
 	case "Query.getUser":
 		if e.complexity.Query.GetUser == nil {
@@ -694,11 +708,11 @@ input LoginInput {
   email: String!
   password: String!
 }
-
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!
   getUser: User!
+  getContentItem(input: ID!): ContentItem!
 }
 
 type Mutation {
@@ -767,6 +781,20 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getContentItem_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int64
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -1678,6 +1706,47 @@ func (ec *executionContext) _Query_getUser(ctx context.Context, field graphql.Co
 	res := resTmp.(*model.User)
 	fc.Result = res
 	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_getContentItem(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_getContentItem_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetContentItem(rctx, args["input"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ContentItem)
+	fc.Result = res
+	return ec.marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItem(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -4059,6 +4128,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getUser(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "getContentItem":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getContentItem(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

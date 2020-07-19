@@ -155,6 +155,18 @@ func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
 	return currentUser, nil
 }
 
+func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error) {
+	_, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, errors.New("user not signed in")
+	}
+	contentItem, err := r.DB.SelectContentItem(input)
+	if err != nil {
+		return nil, err
+	}
+	return contentItem, nil
+}
+
 func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("resolving ContentItems")
 	contentItems, err := r.DB.ListContentItemsBySource(obj)

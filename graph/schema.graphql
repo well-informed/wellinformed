@@ -86,11 +86,11 @@ input LoginInput {
   email: String!
   password: String!
 }
-
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!
   getUser: User!
+  getContentItem(input: ID!): ContentItem!
 }
 
 type Mutation {
