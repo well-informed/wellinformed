@@ -10,8 +10,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
-	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
@@ -50,11 +50,15 @@ func main() {
 
 	router := chi.NewRouter()
 
-	router.Use(cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+	// Basic CORS
+	// for more ideas, see: https://developer.github.com/v3/#cross-origin-resource-sharing
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:8080"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"*"},
 		AllowCredentials: true,
-		Debug:            false,
-	}).Handler)
+	}))
 
 	// router.Use(middleware.RequestID)
 	// router.Use(middleware.Logger)
