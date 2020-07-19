@@ -27,7 +27,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, err := parseToken(r)
-			_, cookieErr := r.Cookie("jid")
+			// _, cookieErr := r.Cookie("jid")
 
 			if err != nil {
 				next.ServeHTTP(w, r)
@@ -51,19 +51,17 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			// set the current user in context
 			ctx := context.WithValue(r.Context(), CurrentUserKey, user)
 			log.Trace("setting user context value to: ", user)
-			if cookieErr != nil {
-				refreshToken, err := GenRefreshToken(user.ID)
-				if err != nil {
-					next.ServeHTTP(w, r)
-					return
-				}
-				log.Errorf("refreshToken: %v", refreshToken.AccessToken)
-				http.SetCookie(w, &http.Cookie{
-					Name:     "jid",
-					Value:    refreshToken.AccessToken,
-					HttpOnly: true,
-				})
+			refreshToken, err := GenRefreshToken(user.ID)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
 			}
+			log.Errorf("refreshToken: %v", refreshToken.AccessToken)
+			http.SetCookie(w, &http.Cookie{
+				Name:     "jid",
+				Value:    refreshToken.AccessToken,
+				HttpOnly: true,
+			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
