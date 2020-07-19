@@ -288,6 +288,7 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 		image_title,
 		image_url)
 	values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+	ON CONFLICT DO NOTHING
 	RETURNING id`)
 	if err != nil {
 		log.Error("failed to prepare content_items insert", err)
@@ -310,11 +311,13 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 		contentItem.ImageTitle,
 		contentItem.ImageURL,
 	).Scan(&id)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		log.Errorf("failed to insert row to content_items. err: ", err)
 		return nil, err
 	}
+	//May return a zero ID if duplicate entry already exists
 	contentItem.ID = id
+	log.Debug("contentItem.ID: ", contentItem.ID)
 	return &contentItem, nil
 }
 
