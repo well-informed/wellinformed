@@ -56,7 +56,6 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			log.Errorf("refreshToken: %v", refreshToken.AccessToken)
 			http.SetCookie(w, &http.Cookie{
 				Name:     "jid",
 				Value:    refreshToken.AccessToken,
