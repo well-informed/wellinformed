@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
@@ -41,8 +42,13 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 				return
 			}
 
-			user, err := db.GetUserById(claims["jti"].(string))
-
+			id, err := strconv.ParseInt(claims["jti"].(string), 10, 64)
+			if err != nil {
+				log.Error("could not parse claim into int. err: ", err)
+				next.ServeHTTP(w, r)
+				return
+			}
+			user, err := db.GetUserById(id)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return

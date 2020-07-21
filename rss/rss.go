@@ -22,7 +22,7 @@ func NewRSS() *RSS {
 func (rss *RSS) FetchSrcFeed(feedLink string, ctx context.Context) (model.SrcRSSFeed, []*model.ContentItem, error) {
 	feed, err := rss.ParseURLWithContext(feedLink, ctx)
 	if err != nil {
-		log.Errorf("could not parse feed at url: %v. err: ", feedLink, err)
+		log.Errorf("could not parse feed at url: %v. err: %v", feedLink, err)
 		return model.SrcRSSFeed{}, nil, err
 	}
 

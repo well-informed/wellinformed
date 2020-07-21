@@ -3,6 +3,9 @@
 package model
 
 import (
+	"fmt"
+	"io"
+	"strconv"
 	"time"
 )
 
@@ -43,6 +46,14 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
+type PreferenceSet struct {
+	ID        int64      `json:"id"`
+	Name      string     `json:"name"`
+	Sort      SortType   `json:"sort"`
+	StartDate *time.Time `json:"startDate"`
+	EndDate   *time.Time `json:"endDate"`
+}
+
 type RegisterInput struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`
@@ -69,4 +80,45 @@ type UserSubscription struct {
 	UserID     int64     `json:"userID"`
 	SrcRSSFeed int64     `json:"srcRSSFeed"`
 	CreatedAt  time.Time `json:"createdAt"`
+}
+
+type SortType string
+
+const (
+	SortTypeChronological SortType = "chronological"
+	SortTypeSourceName    SortType = "sourceName"
+)
+
+var AllSortType = []SortType{
+	SortTypeChronological,
+	SortTypeSourceName,
+}
+
+func (e SortType) IsValid() bool {
+	switch e {
+	case SortTypeChronological, SortTypeSourceName:
+		return true
+	}
+	return false
+}
+
+func (e SortType) String() string {
+	return string(e)
+}
+
+func (e *SortType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SortType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid sortType", str)
+	}
+	return nil
+}
+
+func (e SortType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

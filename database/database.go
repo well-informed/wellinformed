@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -73,7 +72,7 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 		feed.Generator,
 	).Scan(&id)
 	if err != nil {
-		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
+		log.Error("failed to insert row to src_rss_feeds. err: ", err)
 		return nil, err
 	}
 	feed.ID = id
@@ -100,7 +99,7 @@ func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subs
 		time.Now(),
 	).Scan(&id)
 	if err != nil {
-		log.Errorf("failed to insert row to user_subscriptions. err: ", err)
+		log.Error("failed to insert row to user_subscriptions. err: ", err)
 		return nil, err
 	}
 	subscription.ID = id
@@ -135,72 +134,6 @@ func (db DB) DeleteUserSubscription(userID int64, srcID int64) (int, error) {
 		log.Error("error getting rows affected by user subscription deletion. err: ", err)
 	}
 	return int(numDeleted), err
-}
-
-func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (*model.User, error) {
-	var user model.User
-
-	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
-	stmt := strings.Join(s, " ")
-
-	err := db.QueryRow(stmt, args...).Scan(
-		&user.ID,
-		&user.Firstname,
-		&user.Lastname,
-		&user.Username,
-		&user.Email,
-		&user.Password,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-
-	return &user, err
-}
-
-func (db DB) GetUserByEmail(value string) (*model.User, error) {
-	return db.getUserByField("*", "email = $1", value)
-}
-
-func (db DB) GetUserByUsername(value string) (*model.User, error) {
-	return db.getUserByField("*", "user_name = $1", value)
-}
-
-func (db DB) GetUserById(value string) (*model.User, error) {
-	return db.getUserByField("*", "id = $1", value)
-}
-
-func (db DB) CreateUser(user model.User) (model.User, error) {
-	stmt, err := db.Prepare(`INSERT INTO users
-	( email,
-		first_name,
-		last_name,
-		user_name,
-		password)
-		values($1,$2,$3,$4,$5)
-		RETURNING id
-		`)
-	if err != nil {
-		log.Error("failed to prepare user insert: ", err)
-		return user, err
-	}
-
-	var ID int64
-	err = stmt.QueryRow(
-		user.Email,
-		user.Firstname,
-		user.Lastname,
-		user.Username,
-		user.Password,
-	).Scan(&ID)
-	if err != nil {
-		log.Errorf("failed to insert row to create user. err: ", err)
-		return user, err
-	}
-	user.ID = ID
-	log.Info("got id back: ", ID)
-	return user, nil
 }
 
 func (db DB) SelectSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -326,7 +259,7 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 		contentItem.ImageURL,
 	).Scan(&id)
 	if err != nil && err != sql.ErrNoRows {
-		log.Errorf("failed to insert row to content_items. err: ", err)
+		log.Error("failed to insert row to content_items. err: ", err)
 		return nil, err
 	}
 	//May return a zero ID if duplicate entry already exists

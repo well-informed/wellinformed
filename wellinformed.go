@@ -19,7 +19,7 @@ type Persistor interface {
 	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
 	GetUserByEmail(string) (*model.User, error)
 	GetUserByUsername(string) (*model.User, error)
-	GetUserById(string) (*model.User, error)
+	GetUserById(int64) (*model.User, error)
 	CreateUser(model.User) (model.User, error)
 }
 

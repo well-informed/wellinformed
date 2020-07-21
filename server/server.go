@@ -100,7 +100,7 @@ func main() {
 			return
 		}
 
-		user, err := resolver.DB.GetUserById(claims["jti"].(string))
+		user, err := resolver.DB.GetUserById(claims["jti"].(int64))
 
 		log.Printf("user: %v", user)
 

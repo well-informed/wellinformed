@@ -13,11 +13,15 @@ var tables = []table{
 		sql: `
 	CREATE TABLE IF NOT EXISTS users
 	( id BIGSERIAL PRIMARY KEY,
-		email varchar,
-		first_name varchar,
-		last_name varchar,
-		user_name varchar,
-		password varchar)`,
+		email varchar NOT NULL,
+		first_name varchar NOT NULL,
+		last_name varchar NOT NULL,
+		user_name varchar NOT NULL,
+		password varchar NOT NULL,
+		active_preference_set int NOT NULL,
+		created_at timestamp with time zone NOT NULL,
+		updated_at timestamp with time zone NOT NULL
+		)`,
 	},
 	{
 		name: "src_rss_feeds",
@@ -46,19 +50,32 @@ var tables = []table{
 		name: "content_items",
 		sql: `CREATE TABLE IF NOT EXISTS content_items
 	( id BIGSERIAL PRIMARY KEY,
-	 source_id int NOT NULL REFERENCES src_rss_feeds(id),
-	 source_title varchar NOT NULL,
-	 source_link varchar NOT NULL,
-	 title varchar NOT NULL,
-	 description varchar,
-	 content varchar,
-	 link varchar NOT NULL,
-	 updated timestamp with time zone,
-	 published timestamp with time zone,
-	 author varchar,
-	 guid varchar NOT NULL,
-	 image_title varchar,
-	 image_url varchar,
-	 UNIQUE (source_id, link)
-	)`},
+	  source_id int NOT NULL REFERENCES src_rss_feeds(id),
+	  source_title varchar NOT NULL,
+	  source_link varchar NOT NULL,
+	  title varchar NOT NULL,
+	  description varchar,
+	  content varchar,
+	  link varchar NOT NULL,
+	  updated timestamp with time zone,
+	  published timestamp with time zone,
+	  author varchar,
+	  guid varchar NOT NULL,
+	  image_title varchar,
+	  image_url varchar,
+	  UNIQUE (source_id, link)
+	)`,
+	},
+	{
+		name: "preference_sets",
+		sql: `CREATE TABLE IF NOT EXISTS preference_sets
+		( id BIGSERIAL PRIMARY KEY,
+			user_id int NOT NULL REFERENCES users(id),
+			name varchar NOT NULL,
+			sort varchar NOT NULL,
+			start_date timestamp with time zone,
+			end_date timestamp with time zone,
+			UNIQUE (user_id, name)
+		)`,
+	},
 }

@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -25,7 +26,7 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 		return nil, err
 	}
 	log.Debug("existingFeed: ", existingFeed)
-	log.Debug("user: %v", user)
+	log.Debugf("user: %v", user)
 
 	if existingFeed != nil {
 		_, err := r.Sub.AddUserSubscription(user, existingFeed)
@@ -193,8 +194,20 @@ func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSS
 	return contentItems, nil
 }
 
+func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFeed, error) {
+	return r.Query().UserFeed(ctx)
+}
+
 func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error) {
 	return r.DB.ListSrcRSSFeedsByUser(obj)
+}
+
+func (r *userResolver) PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 // Mutation returns generated.MutationResolver implementation.

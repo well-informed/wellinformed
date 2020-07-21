@@ -15,13 +15,13 @@ type SrcRSSFeed struct {
 }
 
 type User struct {
-	ID        int64     `json:"id"`
-	Firstname string    `json:"firstname"`
-	Lastname  string    `json:"lastname"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Password  string    `json:"password"`
-	Feed      *UserFeed `json:"feed"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID                  int64     `json:"id"`
+	Firstname           string    `json:"firstname"`
+	Lastname            string    `json:"lastname"`
+	Username            string    `json:"username"`
+	Email               string    `json:"email"`
+	Password            string    `json:"password"`
+	ActivePreferenceSet int64     `json:"activePreferenceSet"`
+	CreatedAt           time.Time `json:"createdAt"`
+	UpdatedAt           time.Time `json:"updatedAt"`
 }
