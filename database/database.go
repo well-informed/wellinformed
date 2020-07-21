@@ -3,15 +3,17 @@ package database
 import (
 	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
 type DB struct {
+	Gorm    *gorm.DB
 	*sql.DB //embeds the sql db methods on the DB struct
 }
 
@@ -19,13 +21,20 @@ type DB struct {
 and creates necessary tables if they do not already exist*/
 func NewDB() DB {
 	connStr := "user=postgres password=password dbname=postgres sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+	db, err := gorm.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
-	createTables(db, tables)
+	// createTables(db.DB(), tables)
+	db.AutoMigrate(&model.User{},
+		&model.SrcRSSFeed{},
+		&model.UserSubscription{},
+		&model.ContentItem{})
 
-	return DB{db}
+	return DB{
+		db,
+		db.DB(),
+	}
 }
 
 /*Creates all necessary tables, either returns successfully,
@@ -42,44 +51,51 @@ func createTable(db *sql.DB, name string, stmt string) {
 		log.Fatalf("error creating table %v. err: %v", name, err)
 	}
 }
-
 func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) {
-	stmt, err := db.Prepare(`INSERT INTO src_rss_feeds
-	( title,
-		description,
-		link,
-		feed_link,
-		updated,
-		last_fetched_at,
-		language,
-		generator)
-		values($1,$2,$3,$4,$5,$6,$7,$8)
-		RETURNING id
-		`)
+	err := db.Gorm.Create(&feed).Error
 	if err != nil {
-		log.Error("failed to prepare src_rss_feeds insert: ", err)
 		return nil, err
 	}
-
-	var id int64
-	err = stmt.QueryRow(
-		feed.Title,
-		feed.Description,
-		feed.Link,
-		feed.FeedLink,
-		feed.Updated,
-		feed.LastFetchedAt,
-		feed.Language,
-		feed.Generator,
-	).Scan(&id)
-	if err != nil {
-		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
-		return nil, err
-	}
-	feed.ID = id
-	log.Info("got id back: ", id)
 	return &feed, nil
 }
+
+// func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) {
+// 	stmt, err := db.Prepare(`INSERT INTO src_rss_feeds
+// 	( title,
+// 		description,
+// 		link,
+// 		feed_link,
+// 		updated,
+// 		last_fetched_at,
+// 		language,
+// 		generator)
+// 		values($1,$2,$3,$4,$5,$6,$7,$8)
+// 		RETURNING id
+// 		`)
+// 	if err != nil {
+// 		log.Error("failed to prepare src_rss_feeds insert: ", err)
+// 		return nil, err
+// 	}
+
+// 	var id int64
+// 	err = stmt.QueryRow(
+// 		feed.Title,
+// 		feed.Description,
+// 		feed.Link,
+// 		feed.FeedLink,
+// 		feed.Updated,
+// 		feed.LastFetchedAt,
+// 		feed.Language,
+// 		feed.Generator,
+// 	).Scan(&id)
+// 	if err != nil {
+// 		log.Errorf("failed to insert row to src_rss_feeds. err: ", err)
+// 		return nil, err
+// 	}
+// 	feed.ID = id
+// 	log.Info("got id back: ", id)
+// 	return &feed, nil
+// }
 
 func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subscription *model.UserSubscription, err error) {
 	subscription = &model.UserSubscription{}
@@ -125,24 +141,15 @@ func (db DB) SelectUserSubscription(userID int64, srcID int64) (*model.UserSubsc
 
 func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (*model.User, error) {
 	var user model.User
-
-	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
-	stmt := strings.Join(s, " ")
-
-	err := db.QueryRow(stmt, args...).Scan(
-		&user.ID,
-		&user.Firstname,
-		&user.Lastname,
-		&user.Username,
-		&user.Email,
-		&user.Password,
-	)
-
-	if err == sql.ErrNoRows {
+	err := db.Gorm.Where(whereClause, args).First(&user).Error
+	if err != nil && !gorm.IsRecordNotFoundError(err) {
+		log.Errorf("could not find user: err:", err)
+		return nil, err
+	}
+	if gorm.IsRecordNotFoundError(err) {
 		return nil, nil
 	}
-
-	return &user, err
+	return &user, nil
 }
 
 func (db DB) GetUserByEmail(value string) (*model.User, error) {
@@ -158,34 +165,11 @@ func (db DB) GetUserById(value string) (*model.User, error) {
 }
 
 func (db DB) CreateUser(user model.User) (model.User, error) {
-	stmt, err := db.Prepare(`INSERT INTO users
-	( email,
-		first_name,
-		last_name,
-		user_name,
-		password)
-		values($1,$2,$3,$4,$5)
-		RETURNING id
-		`)
+	err := db.Gorm.Create(&user).Error
 	if err != nil {
-		log.Error("failed to prepare user insert: ", err)
-		return user, err
+		return model.User{}, err
 	}
-
-	var ID int64
-	err = stmt.QueryRow(
-		user.Email,
-		user.Firstname,
-		user.Lastname,
-		user.Username,
-		user.Password,
-	).Scan(&ID)
-	if err != nil {
-		log.Errorf("failed to insert row to create user. err: ", err)
-		return user, err
-	}
-	user.ID = ID
-	log.Info("got id back: ", ID)
+	log.Info("created user: ", user)
 	return user, nil
 }
 
@@ -317,7 +301,6 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 	}
 	//May return a zero ID if duplicate entry already exists
 	contentItem.ID = id
-	log.Debug("contentItem.ID: ", contentItem.ID)
 	return &contentItem, nil
 }
 

@@ -30,6 +30,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			_, cookieErr := r.Cookie("jid")
 
 			if err != nil {
+				log.Debug("could not parse token. err: ", err)
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -44,6 +45,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			user, err := db.GetUserById(claims["jti"].(string))
 
 			if err != nil {
+				log.Debug("could not get user by id. err: ", err)
 				next.ServeHTTP(w, r)
 				return
 			}

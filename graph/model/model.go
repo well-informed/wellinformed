@@ -1,9 +1,11 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type SrcRSSFeed struct {
-	ID            int64     `json:"id"`
+	ID            int64     `json:"id" gorm:"PRIMARY_KEY,AUTO_INCREMENT"`
 	Title         string    `json:"title"`
 	Description   *string   `json:"description"`
 	Link          string    `json:"link"`
@@ -15,7 +17,7 @@ type SrcRSSFeed struct {
 }
 
 type User struct {
-	ID        int64     `json:"id"`
+	ID        int64     `json:"id" gorm:"PRIMARY_KEY,AUTO_INCREMENT"`
 	Firstname string    `json:"firstname"`
 	Lastname  string    `json:"lastname"`
 	Username  string    `json:"username"`
@@ -24,4 +26,11 @@ type User struct {
 	Feed      *UserFeed `json:"feed"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type UserSubscription struct {
+	ID         int64       `json:"id"`
+	User       *User       `json:"user"`
+	SrcRSSFeed *SrcRSSFeed `json:"srcRSSFeed"`
+	CreatedAt  time.Time   `json:"createdAt"`
 }

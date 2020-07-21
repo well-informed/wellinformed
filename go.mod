@@ -8,6 +8,7 @@ require (
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-chi/cors v1.1.1 // indirect
 	github.com/go-chi/render v1.0.1 // indirect
+	github.com/jinzhu/gorm v1.9.15
 	github.com/lib/pq v1.7.0
 	github.com/mmcdole/gofeed v1.0.0
 	github.com/pkg/errors v0.8.1

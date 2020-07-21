@@ -17,6 +17,7 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 		db: db,
 	}
 }
+
 func (f feedService) Serve(ctx context.Context, user *model.User) (*model.UserFeed, error) {
 	userSources, err := f.db.ListSrcRSSFeedsByUser(user)
 	if err != nil {

@@ -43,8 +43,8 @@ type ContentItem {
 
 type UserSubscription {
   id: ID!
-  userID: ID!
-  srcRSSFeed: ID!
+  user: User!
+  srcRSSFeed: SrcRSSFeed!
   createdAt: Time!
 }
 

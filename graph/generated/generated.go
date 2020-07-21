@@ -123,7 +123,7 @@ type ComplexityRoot struct {
 		CreatedAt  func(childComplexity int) int
 		ID         func(childComplexity int) int
 		SrcRSSFeed func(childComplexity int) int
-		UserID     func(childComplexity int) int
+		User       func(childComplexity int) int
 	}
 }
 
@@ -549,12 +549,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UserSubscription.SrcRSSFeed(childComplexity), true
 
-	case "UserSubscription.userID":
-		if e.complexity.UserSubscription.UserID == nil {
+	case "UserSubscription.user":
+		if e.complexity.UserSubscription.User == nil {
 			break
 		}
 
-		return e.complexity.UserSubscription.UserID(childComplexity), true
+		return e.complexity.UserSubscription.User(childComplexity), true
 
 	}
 	return 0, false
@@ -665,8 +665,8 @@ type ContentItem {
 
 type UserSubscription {
   id: ID!
-  userID: ID!
-  srcRSSFeed: ID!
+  user: User!
+  srcRSSFeed: SrcRSSFeed!
   createdAt: Time!
 }
 
@@ -2625,7 +2625,7 @@ func (ec *executionContext) _UserSubscription_id(ctx context.Context, field grap
 	return ec.marshalNID2int64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _UserSubscription_userID(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
+func (ec *executionContext) _UserSubscription_user(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2642,7 +2642,7 @@ func (ec *executionContext) _UserSubscription_userID(ctx context.Context, field 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.UserID, nil
+		return obj.User, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2654,9 +2654,9 @@ func (ec *executionContext) _UserSubscription_userID(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int64)
+	res := resTmp.(*model.User)
 	fc.Result = res
-	return ec.marshalNID2int64(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserSubscription_srcRSSFeed(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
@@ -2688,9 +2688,9 @@ func (ec *executionContext) _UserSubscription_srcRSSFeed(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int64)
+	res := resTmp.(*model.SrcRSSFeed)
 	fc.Result = res
-	return ec.marshalNID2int64(ctx, field.Selections, res)
+	return ec.marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserSubscription_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
@@ -4368,8 +4368,8 @@ func (ec *executionContext) _UserSubscription(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "userID":
-			out.Values[i] = ec._UserSubscription_userID(ctx, field, obj)
+		case "user":
+			out.Values[i] = ec._UserSubscription_user(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

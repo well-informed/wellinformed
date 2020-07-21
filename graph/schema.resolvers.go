@@ -48,20 +48,19 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
 	existingUser, err := r.DB.GetUserByEmail(input.Email)
-
 	if err != nil {
 		return nil, err
 	}
 
 	if existingUser != nil {
-		log.Printf("error while GetUserByEmail: %v", err)
-		return nil, errors.New("email already in used")
+		log.Debug("existing user: ", existingUser)
+		return nil, errors.New("email already in use")
 	}
 
 	existingUser, err = r.DB.GetUserByUsername(input.Username)
 
 	if existingUser != nil {
-		return nil, errors.New("username already in used")
+		return nil, errors.New("username already in use")
 	}
 
 	user := &model.User{
@@ -73,7 +72,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 	hashedPassword, err := auth.HashPassword(input.Password)
 	if err != nil {
-		log.Printf("error while hashing password: %v", err)
+		log.Errorf("error while hashing password: %v", err)
 		return nil, errors.New("something went wrong")
 	}
 
@@ -81,13 +80,13 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 	createdUser, err := r.DB.CreateUser(*user)
 
 	if err != nil {
-		log.Printf("error creating a user: %v", err)
+		log.Errorf("error creating a user: %v", err)
 		return nil, err
 	}
 
 	token, err := auth.GenAccessToken(user.ID)
 	if err != nil {
-		log.Printf("error while generating the token: %v", err)
+		log.Errorf("error while generating the token: %v", err)
 		return nil, errors.New("something went wrong")
 	}
 
