@@ -58,5 +58,4 @@ func TestUserSQL(t *testing.T) {
 		t.Errorf("user: %+v", user)
 		t.Errorf("byUsername: %+v", byUsername)
 	}
-
 }
