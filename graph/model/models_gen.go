@@ -34,6 +34,10 @@ type ContentItem struct {
 	SourceType  string     `json:"sourceType"`
 }
 
+type DeleteResponse struct {
+	Ok bool `json:"ok"`
+}
+
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
