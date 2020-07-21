@@ -86,6 +86,7 @@ input LoginInput {
   email: String!
   password: String!
 }
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!

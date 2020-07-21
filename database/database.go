@@ -364,7 +364,7 @@ func (db DB) SelectContentItem(id int64) (*model.ContentItem, error) {
 
 func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("received query with src feed object: ", src)
-	stmt := `SELECT * FROM content_items WHERE source_id = $1`
+	stmt := `SELECT * FROM content_items WHERE source_id = $1 ORDER BY published DESC`
 	rows, err := db.Query(stmt, src.ID)
 	defer rows.Close()
 	if err != nil {
