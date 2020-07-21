@@ -95,6 +95,7 @@ type Query {
 
 type Mutation {
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
+  deleteSubscription(srcRSSFeedID: ID!): Int!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
 }

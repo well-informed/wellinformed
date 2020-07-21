@@ -75,9 +75,10 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddSrcRSSFeed func(childComplexity int, feedLink string) int
-		Login         func(childComplexity int, input model.LoginInput) int
-		Register      func(childComplexity int, input model.RegisterInput) int
+		AddSrcRSSFeed      func(childComplexity int, feedLink string) int
+		DeleteSubscription func(childComplexity int, srcRssfeedID int64) int
+		Login              func(childComplexity int, input model.LoginInput) int
+		Register           func(childComplexity int, input model.RegisterInput) int
 	}
 
 	Query struct {
@@ -129,6 +130,7 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
+	DeleteSubscription(ctx context.Context, srcRssfeedID int64) (int, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
 }
@@ -304,6 +306,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.AddSrcRSSFeed(childComplexity, args["feedLink"].(string)), true
+
+	case "Mutation.deleteSubscription":
+		if e.complexity.Mutation.DeleteSubscription == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteSubscription_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteSubscription(childComplexity, args["srcRSSFeedID"].(int64)), true
 
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
@@ -717,6 +731,7 @@ type Query {
 
 type Mutation {
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
+  deleteSubscription(srcRSSFeedID: ID!): Int!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
 }
@@ -739,6 +754,20 @@ func (ec *executionContext) field_Mutation_addSrcRSSFeed_args(ctx context.Contex
 		}
 	}
 	args["feedLink"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteSubscription_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int64
+	if tmp, ok := rawArgs["srcRSSFeedID"]; ok {
+		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["srcRSSFeedID"] = arg0
 	return args, nil
 }
 
@@ -1515,6 +1544,47 @@ func (ec *executionContext) _Mutation_addSrcRSSFeed(ctx context.Context, field g
 	res := resTmp.(*model.SrcRSSFeed)
 	fc.Result = res
 	return ec.marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteSubscription(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteSubscription_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteSubscription(rctx, args["srcRSSFeedID"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_register(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -4055,6 +4125,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "deleteSubscription":
+			out.Values[i] = ec._Mutation_deleteSubscription(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "register":
 			out.Values[i] = ec._Mutation_register(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -4738,6 +4813,20 @@ func (ec *executionContext) unmarshalNID2int64(ctx context.Context, v interface{
 
 func (ec *executionContext) marshalNID2int64(ctx context.Context, sel ast.SelectionSet, v int64) graphql.Marshaler {
 	res := graphql.MarshalInt64(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	return graphql.UnmarshalInt(v)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")

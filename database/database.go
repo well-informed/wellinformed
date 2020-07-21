@@ -123,6 +123,20 @@ func (db DB) SelectUserSubscription(userID int64, srcID int64) (*model.UserSubsc
 	return &userSub, err
 }
 
+func (db DB) DeleteUserSubscription(userID int64, srcID int64) (int, error) {
+	stmt := `DELETE FROM user_subscriptions WHERE user_id = $1 AND source_id = $2`
+	result, err := db.Exec(stmt, userID, srcID)
+	if err != nil {
+		log.Error("unable to delete user subscription", err)
+		return 0, err
+	}
+	numDeleted, err := result.RowsAffected()
+	if err != nil {
+		log.Error("error getting rows affected by user subscription deletion. err: ", err)
+	}
+	return int(numDeleted), err
+}
+
 func (db DB) getUserByField(selection string, whereClause string, args ...interface{}) (*model.User, error) {
 	var user model.User
 
