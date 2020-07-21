@@ -93,9 +93,13 @@ type Query {
   getContentItem(input: ID!): ContentItem!
 }
 
+type DeleteResponse {
+  ok: Boolean!
+}
+
 type Mutation {
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
-  deleteSubscription(srcRSSFeedID: ID!): Int!
+  deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
 }

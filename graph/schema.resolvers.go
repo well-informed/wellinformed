@@ -46,16 +46,21 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	return insertedFeed, nil
 }
 
-func (r *mutationResolver) DeleteSubscription(ctx context.Context, srcRssfeedID int64) (int, error) {
+func (r *mutationResolver) DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
-		return 0, err
+		return nil, errors.New("Something went wrong")
 	}
 	numDeleted, err := r.DB.DeleteUserSubscription(user.ID, srcRssfeedID)
 	if err != nil {
-		return 0, err
+		return nil, errors.New("Error deleting subscription")
 	}
-	return numDeleted, nil
+	if numDeleted == 0 {
+		return nil, errors.New("Subscription ID does not exist")
+	}
+	return &model.DeleteResponse{
+		Ok: true,
+	}, nil
 }
 
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
