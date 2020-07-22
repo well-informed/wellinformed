@@ -65,82 +65,15 @@ func (r *mutationResolver) DeleteSubscription(ctx context.Context, srcRssfeedID 
 }
 
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
-	existingUser, err := r.DB.GetUserByEmail(input.Email)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if existingUser != nil {
-		log.Printf("error while GetUserByEmail: %v", err)
-		return nil, errors.New("email already in used")
-	}
-
-	existingUser, err = r.DB.GetUserByUsername(input.Username)
-
-	if existingUser != nil {
-		return nil, errors.New("username already in used")
-	}
-
-	user := &model.User{
-		Username:  input.Username,
-		Email:     input.Email,
-		Firstname: input.Firstname,
-		Lastname:  input.Lastname,
-	}
-
-	hashedPassword, err := auth.HashPassword(input.Password)
-	if err != nil {
-		log.Printf("error while hashing password: %v", err)
-		return nil, errors.New("something went wrong")
-	}
-
-	user.Password = hashedPassword
-	createdUser, err := r.DB.CreateUser(*user)
-
-	if err != nil {
-		log.Printf("error creating a user: %v", err)
-		return nil, err
-	}
-
-	token, err := auth.GenAccessToken(user.ID)
-	if err != nil {
-		log.Printf("error while generating the token: %v", err)
-		return nil, errors.New("something went wrong")
-	}
-
-	return &model.AuthResponse{
-		AuthToken: token,
-		User:      &createdUser,
-	}, nil
+	return r.UserService.Register(ctx, input)
 }
 
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
-	// log.Printf("context: %v", ctx)
-	existingUser, err := r.DB.GetUserByEmail(input.Email)
-	log.Printf("existingUser: %v", existingUser)
+	return r.UserService.Login(ctx, input)
+}
 
-	if existingUser == nil || err != nil {
-		log.Printf("GetUserByEmail err: %v", err)
-		return nil, errors.New("email/password combination don't work 1")
-	}
-
-	err = auth.ComparePassword(input.Password, existingUser.Password)
-	if err != nil {
-		log.Printf("ComparePassword err: %v", err)
-		return nil, errors.New("email/password combination don't work 2")
-	}
-
-	accessToken, err := auth.GenAccessToken(existingUser.ID)
-	// refreshToken, rerr := user.GenRefreshToken()
-	if err != nil {
-		return nil, errors.New("something went wrong")
-	}
-
-	return &model.AuthResponse{
-		AuthToken: accessToken,
-		User:      existingUser,
-	}, nil
+func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
+	return r.DB.GetUserById(obj.UserID)
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -213,6 +146,9 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
+// PreferenceSet returns generated.PreferenceSetResolver implementation.
+func (r *Resolver) PreferenceSet() generated.PreferenceSetResolver { return &preferenceSetResolver{r} }
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
@@ -223,6 +159,7 @@ func (r *Resolver) SrcRSSFeed() generated.SrcRSSFeedResolver { return &srcRSSFee
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
 type mutationResolver struct{ *Resolver }
+type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }

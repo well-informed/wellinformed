@@ -17,6 +17,7 @@ import (
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/rss"
 	"github.com/well-informed/wellinformed/subscriber"
+	"github.com/well-informed/wellinformed/user"
 )
 
 const defaultPort = "8080"
@@ -38,10 +39,11 @@ func main() {
 	feedService := feed.NewFeedService(db)
 
 	resolver := &graph.Resolver{
-		DB:   db,
-		RSS:  rss,
-		Sub:  sub,
-		Feed: feedService,
+		DB:          db,
+		RSS:         rss,
+		Sub:         sub,
+		Feed:        feedService,
+		UserService: user.NewUserService(db),
 	}
 
 	router := chi.NewRouter()
@@ -71,5 +73,3 @@ func main() {
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
 }
-
-

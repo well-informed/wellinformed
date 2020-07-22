@@ -7,8 +7,9 @@ import "github.com/well-informed/wellinformed"
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	DB   wellinformed.Persistor
-	RSS  wellinformed.RSS
-	Sub  wellinformed.Subscriber
-	Feed wellinformed.FeedService
+	DB          wellinformed.Persistor
+	RSS         wellinformed.RSS
+	Sub         wellinformed.Subscriber
+	Feed        wellinformed.FeedService
+	UserService wellinformed.UserService
 }

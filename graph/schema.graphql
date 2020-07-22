@@ -71,6 +71,7 @@ type User {
 
 type PreferenceSet {
   id: ID!
+  user: User!
   name: String!
   sort: sortType!
   startDate: Time

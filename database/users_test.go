@@ -18,7 +18,7 @@ func TestUserSQL(t *testing.T) {
 		Username:            "hisnameismyname",
 		Email:               "longname@email.com",
 		Password:            "asldkfjas;dfk",
-		ActivePreferenceSet: 5,
+		ActivePreferenceSet: "default",
 		CreatedAt:           currentTime,
 		UpdatedAt:           currentTime,
 	}

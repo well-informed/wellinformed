@@ -15,3 +15,6 @@ wait:
 
 gql:
 	gqlgen generate
+
+test:
+	go test -v ./...

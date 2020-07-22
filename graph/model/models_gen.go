@@ -19,24 +19,6 @@ type AuthToken struct {
 	ExpiredAt   time.Time `json:"expiredAt"`
 }
 
-type ContentItem struct {
-	ID          int64      `json:"id"`
-	SourceID    int64      `json:"sourceID"`
-	SourceTitle string     `json:"sourceTitle"`
-	SourceLink  string     `json:"sourceLink"`
-	Title       string     `json:"title"`
-	Description string     `json:"description"`
-	Content     string     `json:"content"`
-	Link        string     `json:"link"`
-	Updated     *time.Time `json:"updated"`
-	Published   *time.Time `json:"published"`
-	Author      *string    `json:"author"`
-	GUID        *string    `json:"guid"`
-	ImageTitle  *string    `json:"imageTitle"`
-	ImageURL    *string    `json:"imageURL"`
-	SourceType  string     `json:"sourceType"`
-}
-
 type DeleteResponse struct {
 	Ok bool `json:"ok"`
 }
@@ -44,14 +26,6 @@ type DeleteResponse struct {
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-}
-
-type PreferenceSet struct {
-	ID        int64      `json:"id"`
-	Name      string     `json:"name"`
-	Sort      SortType   `json:"sort"`
-	StartDate *time.Time `json:"startDate"`
-	EndDate   *time.Time `json:"endDate"`
 }
 
 type RegisterInput struct {

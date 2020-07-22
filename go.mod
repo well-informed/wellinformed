@@ -9,6 +9,7 @@ require (
 	github.com/go-chi/cors v1.1.1
 	github.com/go-chi/render v1.0.1
 	github.com/google/go-cmp v0.5.0
+	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.7.0
 	github.com/mmcdole/gofeed v1.0.0
 	github.com/pkg/errors v0.8.1

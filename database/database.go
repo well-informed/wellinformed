@@ -5,20 +5,21 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
 type DB struct {
-	*sql.DB //embeds the sql db methods on the DB struct
+	*sqlx.DB //embeds the sql db methods on the DB struct
 }
 
 /*NewDB Creates a new handle on the database
 and creates necessary tables if they do not already exist*/
 func NewDB() DB {
 	connStr := "user=postgres password=password dbname=postgres sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+	db, err := sqlx.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
@@ -29,13 +30,13 @@ func NewDB() DB {
 
 /*Creates all necessary tables, either returns successfully,
 or exits the program with call to log.Fatal()*/
-func createTables(db *sql.DB, tables []table) {
+func createTables(db *sqlx.DB, tables []table) {
 	for _, table := range tables {
 		createTable(db, table.name, table.sql)
 	}
 }
 
-func createTable(db *sql.DB, name string, stmt string) {
+func createTable(db *sqlx.DB, name string, stmt string) {
 	_, err := db.Exec(stmt)
 	if err != nil {
 		log.Fatalf("error creating table %v. err: %v", name, err)
@@ -216,125 +217,6 @@ func (db DB) ListSrcRSSFeedsByQuery(stmt string, args ...interface{}) ([]*model.
 		return nil, err
 	}
 	return feeds, nil
-}
-
-func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentItem, error) {
-	log.Debugf("about to insert item with source_id: %v, link: %v", contentItem.SourceID, contentItem.Link)
-	stmt, err := db.Prepare(`INSERT INTO content_items
-	( source_id,
-		source_title,
-		source_link,
-		title,
-		description,
-		content,
-		link,
-		updated,
-		published,
-		author,
-		guid,
-		image_title,
-		image_url)
-	values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-	ON CONFLICT DO NOTHING
-	RETURNING id`)
-	if err != nil {
-		log.Error("failed to prepare content_items insert", err)
-		return nil, err
-	}
-
-	var id int64
-	err = stmt.QueryRow(
-		contentItem.SourceID,
-		contentItem.SourceTitle,
-		contentItem.SourceLink,
-		contentItem.Title,
-		contentItem.Description,
-		contentItem.Content,
-		contentItem.Link,
-		contentItem.Updated,
-		contentItem.Published,
-		contentItem.Author,
-		contentItem.GUID,
-		contentItem.ImageTitle,
-		contentItem.ImageURL,
-	).Scan(&id)
-	if err != nil && err != sql.ErrNoRows {
-		log.Error("failed to insert row to content_items. err: ", err)
-		return nil, err
-	}
-	//May return a zero ID if duplicate entry already exists
-	contentItem.ID = id
-	log.Debug("contentItem.ID: ", contentItem.ID)
-	return &contentItem, nil
-}
-
-func (db DB) SelectContentItem(id int64) (*model.ContentItem, error) {
-	stmt := `SELECT * FROM content_items WHERE id = $1`
-
-	var contentItem model.ContentItem
-	err := db.QueryRow(stmt, id).Scan(
-		&contentItem.ID,
-		&contentItem.SourceID,
-		&contentItem.SourceTitle,
-		&contentItem.SourceLink,
-		&contentItem.Title,
-		&contentItem.Description,
-		&contentItem.Content,
-		&contentItem.Link,
-		&contentItem.Updated,
-		&contentItem.Published,
-		&contentItem.Author,
-		&contentItem.GUID,
-		&contentItem.ImageTitle,
-		&contentItem.ImageURL,
-	)
-	if err != nil {
-		log.Errorf("failed to select content_item. err: err")
-		return nil, err
-	}
-	return &contentItem, nil
-}
-
-func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
-	log.Debug("received query with src feed object: ", src)
-	stmt := `SELECT * FROM content_items WHERE source_id = $1`
-	rows, err := db.Query(stmt, src.ID)
-	defer rows.Close()
-	if err != nil {
-		log.Error("Error selecting content items by source from db. err: ", err)
-		return nil, err
-	}
-	contentItems := make([]*model.ContentItem, 0)
-	for rows.Next() {
-		var contentItem model.ContentItem
-		err := rows.Scan(
-			&contentItem.ID,
-			&contentItem.SourceID,
-			&contentItem.SourceTitle,
-			&contentItem.SourceLink,
-			&contentItem.Title,
-			&contentItem.Description,
-			&contentItem.Content,
-			&contentItem.Link,
-			&contentItem.Updated,
-			&contentItem.Published,
-			&contentItem.Author,
-			&contentItem.GUID,
-			&contentItem.ImageTitle,
-			&contentItem.ImageURL,
-		)
-		if err != nil {
-			log.Error("error with scan. err: ", err)
-			return nil, err
-		}
-		log.Debugf("selected contentItem, ID: %v, title: %v", contentItem.ID, contentItem.Title)
-		contentItems = append(contentItems, &contentItem)
-	}
-	if err := rows.Err(); err != nil {
-		log.Error("error while retrieving content items by source. err: ", err)
-		return nil, err
-	}
-	return contentItems, nil
 }
 
 // func createUserHistoryTable(db *sql.DB) {

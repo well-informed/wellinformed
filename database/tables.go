@@ -18,7 +18,7 @@ var tables = []table{
 		last_name varchar NOT NULL,
 		user_name varchar NOT NULL,
 		password varchar NOT NULL,
-		active_preference_set int NOT NULL,
+		active_preference_set varchar NOT NULL,
 		created_at timestamp with time zone NOT NULL,
 		updated_at timestamp with time zone NOT NULL
 		)`,
