@@ -110,3 +110,17 @@ func (u *UserService) Login(ctx context.Context, input model.LoginInput) (*model
 		User:      existingUser,
 	}, nil
 }
+
+func (u *UserService) UpdatePreferenceSet(ctx context.Context, input *model.PreferenceSetInput) (*model.PreferenceSet, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Error("user not logged in. err: ", err)
+		return nil, err
+	}
+	newPrefSet, err := u.db.UpdatePreferenceSet(user.ID, input.Name, input)
+	if err != nil {
+		log.Error("couldn't update preferenceSet. err: ", err)
+		return nil, err
+	}
+	return newPrefSet, nil
+}

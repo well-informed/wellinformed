@@ -28,6 +28,13 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
+type PreferenceSetInput struct {
+	Name      string     `json:"name"`
+	Sort      SortType   `json:"sort"`
+	StartDate *time.Time `json:"startDate"`
+	EndDate   *time.Time `json:"endDate"`
+}
+
 type RegisterInput struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`

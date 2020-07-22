@@ -72,6 +72,10 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	return r.UserService.Login(ctx, input)
 }
 
+func (r *mutationResolver) UpdatePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
+	return r.UserService.UpdatePreferenceSet(ctx, &input)
+}
+
 func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
 	return r.DB.GetUserById(obj.UserID)
 }
@@ -136,11 +140,11 @@ func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*mod
 }
 
 func (r *userResolver) PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.DB.ListPreferenceSetsByUser(obj.ID)
 }
 
 func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSet)
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -163,3 +167,13 @@ type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *mutationResolver) ChangeActivePreferenceSet(ctx context.Context, input string) (*model.PreferenceSet, error) {
+	panic(fmt.Errorf("not implemented"))
+}

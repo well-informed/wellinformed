@@ -27,6 +27,7 @@ type Persistor interface {
 	ListPreferenceSetsByUser(int64) ([]*model.PreferenceSet, error)
 	GetPreferenceSetByID(int64) (*model.PreferenceSet, error)
 	GetPreferenceSetByName(int64, string) (*model.PreferenceSet, error)
+	UpdatePreferenceSet(int64, string, *model.PreferenceSetInput) (*model.PreferenceSet, error)
 }
 
 type RSS interface {
@@ -40,9 +41,4 @@ type Subscriber interface {
 
 type FeedService interface {
 	Serve(ctx context.Context, user *model.User) (*model.UserFeed, error)
-}
-
-type UserService interface {
-	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
-	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
 }

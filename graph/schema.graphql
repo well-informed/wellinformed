@@ -78,6 +78,13 @@ type PreferenceSet {
   endDate: Time
 }
 
+input PreferenceSetInput {
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
 enum sortType {
   chronological
   sourceName
@@ -102,6 +109,7 @@ input LoginInput {
   email: String!
   password: String!
 }
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!
@@ -118,4 +126,5 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
+  updatePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }
