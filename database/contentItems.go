@@ -145,24 +145,26 @@ func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortT
 		log.Error("couldn't construct sqlx.In query. err: ", err)
 		return nil, err
 	}
-	query = db.Rebind(query)
 
 	//Add start and end datetime if available
 	var startWhere string
 	var endWhere string
 	if start_dt != nil {
-		startWhere = `AND published >= ?`
+		startWhere = `AND published >= ? `
 		query = query + startWhere
 		args = append(args, start_dt)
 	}
 	if end_dt != nil {
-		endWhere = `AND published <= ?`
+		endWhere = `AND published <= ? `
 		query = query + endWhere
 		args = append(args, end_dt)
 	}
 
 	//Add sorting
 	query = query + order
+
+	//rebind with postgres style parameters
+	query = db.Rebind(query)
 
 	err = db.Select(&contentItems, query, args...)
 	if err != nil {
