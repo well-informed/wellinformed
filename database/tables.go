@@ -87,6 +87,6 @@ var tables = []table{
 			read_state varchar NOT NULL,
 			percent_read int,
 			UNIQUE(user_id, content_item_id)
-			`,
+		)`,
 	},
 }
