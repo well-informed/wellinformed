@@ -59,3 +59,5 @@ models:
     model: github.com/well-informed/wellinformed/graph/model.PreferenceSet
   ContentItem:
     model: github.com/well-informed/wellinformed/graph/model.ContentItem
+  History:
+    model: github.com/well-informed/wellinformed/graph/model.History

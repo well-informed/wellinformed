@@ -28,6 +28,9 @@ type Persistor interface {
 	GetPreferenceSetByID(int64) (*model.PreferenceSet, error)
 	GetPreferenceSetByName(int64, string) (*model.PreferenceSet, error)
 	UpdatePreferenceSet(int64, string, *model.PreferenceSetInput) (*model.PreferenceSet, error)
+	SaveHistory(int64, *model.HistoryInput) (*model.History, error)
+	ListUserHistory(int64) ([]*model.History, error)
+	GetHistoryByContentID(int64, int64) (*model.History, error)
 }
 
 type RSS interface {

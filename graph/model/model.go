@@ -50,5 +50,13 @@ type ContentItem struct {
 	GUID        *string    `json:"guid"`
 	ImageTitle  *string    `json:"imageTitle" db:"image_title"`
 	ImageURL    *string    `json:"imageURL" db:"image_url"`
-	SourceType  string     `json:"sourceType" db:"source_type`
+	SourceType  string     `json:"sourceType" db:"source_type"`
+}
+
+type History struct {
+	ID            int64     `json:"id"`
+	UserID        int64     `json:"user"`
+	ContentItemID int64     `json:"contentItem"`
+	ReadState     ReadState `json:"readState"`
+	PercentRead   *int      `json:"percentRead"`
 }

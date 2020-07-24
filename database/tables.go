@@ -78,4 +78,15 @@ var tables = []table{
 			UNIQUE (user_id, name)
 		)`,
 	},
+	{
+		name: "history",
+		sql: `CREATE TABLE IF NOT EXISTS history
+		( id BIGSERIAL PRIMARY KEY,
+			user_id int NOT NULL REFERENCES users(id),
+			content_item_id int NOT NULL REFERENCES content_items(id),
+			read_state varchar NOT NULL,
+			percent_read int,
+			UNIQUE(user_id, content_item_id)
+			`,
+	},
 }

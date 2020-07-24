@@ -15,6 +15,14 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
+func (r *historyResolver) User(ctx context.Context, obj *model.History) (*model.User, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *historyResolver) ContentItem(ctx context.Context, obj *model.History) (*model.ContentItem, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
@@ -74,6 +82,14 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 
 func (r *mutationResolver) UpdatePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
 	return r.UserService.UpdatePreferenceSet(ctx, &input)
+}
+
+func (r *mutationResolver) SaveHistory(ctx context.Context, input *model.HistoryInput) (*model.History, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.DB.SaveHistory(user.ID, input)
 }
 
 func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
@@ -147,6 +163,13 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSet)
 }
 
+func (r *userResolver) History(ctx context.Context, obj *model.User) ([]*model.History, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+// History returns generated.HistoryResolver implementation.
+func (r *Resolver) History() generated.HistoryResolver { return &historyResolver{r} }
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
@@ -162,6 +185,7 @@ func (r *Resolver) SrcRSSFeed() generated.SrcRSSFeedResolver { return &srcRSSFee
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
+type historyResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
