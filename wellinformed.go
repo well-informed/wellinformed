@@ -2,6 +2,7 @@ package wellinformed
 
 import (
 	"context"
+	"time"
 
 	"github.com/well-informed/wellinformed/graph/model"
 )
@@ -17,10 +18,16 @@ type Persistor interface {
 	SelectContentItem(int64) (*model.ContentItem, error)
 	InsertContentItem(model.ContentItem) (*model.ContentItem, error)
 	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
+	ServeContentItems([]*model.SrcRSSFeed, model.SortType, *time.Time, *time.Time) ([]*model.ContentItem, error)
 	GetUserByEmail(string) (*model.User, error)
 	GetUserByUsername(string) (*model.User, error)
-	GetUserById(string) (*model.User, error)
+	GetUserById(int64) (*model.User, error)
 	CreateUser(model.User) (model.User, error)
+	CreatePreferenceSet(*model.PreferenceSet) (*model.PreferenceSet, error)
+	ListPreferenceSetsByUser(int64) ([]*model.PreferenceSet, error)
+	GetPreferenceSetByID(int64) (*model.PreferenceSet, error)
+	GetPreferenceSetByName(int64, string) (*model.PreferenceSet, error)
+	UpdatePreferenceSet(int64, string, *model.PreferenceSetInput) (*model.PreferenceSet, error)
 }
 
 type RSS interface {

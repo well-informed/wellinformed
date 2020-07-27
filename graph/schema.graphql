@@ -62,9 +62,32 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
+  srcRSSFeeds: [SrcRSSFeed!]!
+  preferenceSets: [PreferenceSet!]!
+  activePreferenceSet: PreferenceSet!
   createdAt: Time!
   updatedAt: Time!
-  srcRSSFeeds: [SrcRSSFeed!]!
+}
+
+type PreferenceSet {
+  id: ID!
+  user: User!
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+input PreferenceSetInput {
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+enum sortType {
+  chronological
+  sourceName
 }
 
 input SrcRSSFeedInput {
@@ -86,6 +109,7 @@ input LoginInput {
   email: String!
   password: String!
 }
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!
@@ -102,4 +126,5 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
+  updatePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }

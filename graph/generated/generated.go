@@ -37,6 +37,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Mutation() MutationResolver
+	PreferenceSet() PreferenceSetResolver
 	Query() QueryResolver
 	SrcRSSFeed() SrcRSSFeedResolver
 	User() UserResolver
@@ -79,10 +80,20 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddSrcRSSFeed      func(childComplexity int, feedLink string) int
-		DeleteSubscription func(childComplexity int, srcRssfeedID int64) int
-		Login              func(childComplexity int, input model.LoginInput) int
-		Register           func(childComplexity int, input model.RegisterInput) int
+		AddSrcRSSFeed       func(childComplexity int, feedLink string) int
+		DeleteSubscription  func(childComplexity int, srcRssfeedID int64) int
+		Login               func(childComplexity int, input model.LoginInput) int
+		Register            func(childComplexity int, input model.RegisterInput) int
+		UpdatePreferenceSet func(childComplexity int, input model.PreferenceSetInput) int
+	}
+
+	PreferenceSet struct {
+		EndDate   func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Sort      func(childComplexity int) int
+		StartDate func(childComplexity int) int
+		User      func(childComplexity int) int
 	}
 
 	Query struct {
@@ -106,16 +117,18 @@ type ComplexityRoot struct {
 	}
 
 	User struct {
-		CreatedAt   func(childComplexity int) int
-		Email       func(childComplexity int) int
-		Feed        func(childComplexity int) int
-		Firstname   func(childComplexity int) int
-		ID          func(childComplexity int) int
-		Lastname    func(childComplexity int) int
-		Password    func(childComplexity int) int
-		SrcRSSFeeds func(childComplexity int) int
-		UpdatedAt   func(childComplexity int) int
-		Username    func(childComplexity int) int
+		ActivePreferenceSet func(childComplexity int) int
+		CreatedAt           func(childComplexity int) int
+		Email               func(childComplexity int) int
+		Feed                func(childComplexity int) int
+		Firstname           func(childComplexity int) int
+		ID                  func(childComplexity int) int
+		Lastname            func(childComplexity int) int
+		Password            func(childComplexity int) int
+		PreferenceSets      func(childComplexity int) int
+		SrcRSSFeeds         func(childComplexity int) int
+		UpdatedAt           func(childComplexity int) int
+		Username            func(childComplexity int) int
 	}
 
 	UserFeed struct {
@@ -137,6 +150,10 @@ type MutationResolver interface {
 	DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
+	UpdatePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error)
+}
+type PreferenceSetResolver interface {
+	User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error)
 }
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
@@ -148,7 +165,10 @@ type SrcRSSFeedResolver interface {
 	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
 }
 type UserResolver interface {
+	Feed(ctx context.Context, obj *model.User) (*model.UserFeed, error)
 	SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error)
+	PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error)
+	ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error)
 }
 
 type executableSchema struct {
@@ -354,6 +374,60 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.Register(childComplexity, args["input"].(model.RegisterInput)), true
 
+	case "Mutation.updatePreferenceSet":
+		if e.complexity.Mutation.UpdatePreferenceSet == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updatePreferenceSet_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdatePreferenceSet(childComplexity, args["input"].(model.PreferenceSetInput)), true
+
+	case "PreferenceSet.endDate":
+		if e.complexity.PreferenceSet.EndDate == nil {
+			break
+		}
+
+		return e.complexity.PreferenceSet.EndDate(childComplexity), true
+
+	case "PreferenceSet.id":
+		if e.complexity.PreferenceSet.ID == nil {
+			break
+		}
+
+		return e.complexity.PreferenceSet.ID(childComplexity), true
+
+	case "PreferenceSet.name":
+		if e.complexity.PreferenceSet.Name == nil {
+			break
+		}
+
+		return e.complexity.PreferenceSet.Name(childComplexity), true
+
+	case "PreferenceSet.sort":
+		if e.complexity.PreferenceSet.Sort == nil {
+			break
+		}
+
+		return e.complexity.PreferenceSet.Sort(childComplexity), true
+
+	case "PreferenceSet.startDate":
+		if e.complexity.PreferenceSet.StartDate == nil {
+			break
+		}
+
+		return e.complexity.PreferenceSet.StartDate(childComplexity), true
+
+	case "PreferenceSet.user":
+		if e.complexity.PreferenceSet.User == nil {
+			break
+		}
+
+		return e.complexity.PreferenceSet.User(childComplexity), true
+
 	case "Query.getContentItem":
 		if e.complexity.Query.GetContentItem == nil {
 			break
@@ -462,6 +536,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SrcRSSFeed.Updated(childComplexity), true
 
+	case "User.activePreferenceSet":
+		if e.complexity.User.ActivePreferenceSet == nil {
+			break
+		}
+
+		return e.complexity.User.ActivePreferenceSet(childComplexity), true
+
 	case "User.createdAt":
 		if e.complexity.User.CreatedAt == nil {
 			break
@@ -510,6 +591,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Password(childComplexity), true
+
+	case "User.preferenceSets":
+		if e.complexity.User.PreferenceSets == nil {
+			break
+		}
+
+		return e.complexity.User.PreferenceSets(childComplexity), true
 
 	case "User.srcRSSFeeds":
 		if e.complexity.User.SrcRSSFeeds == nil {
@@ -709,9 +797,32 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
+  srcRSSFeeds: [SrcRSSFeed!]!
+  preferenceSets: [PreferenceSet!]!
+  activePreferenceSet: PreferenceSet!
   createdAt: Time!
   updatedAt: Time!
-  srcRSSFeeds: [SrcRSSFeed!]!
+}
+
+type PreferenceSet {
+  id: ID!
+  user: User!
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+input PreferenceSetInput {
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+enum sortType {
+  chronological
+  sourceName
 }
 
 input SrcRSSFeedInput {
@@ -733,6 +844,7 @@ input LoginInput {
   email: String!
   password: String!
 }
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   userFeed: UserFeed!
@@ -749,6 +861,7 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
+  updatePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }
 `, BuiltIn: false},
 }
@@ -806,6 +919,20 @@ func (ec *executionContext) field_Mutation_register_args(ctx context.Context, ra
 	var arg0 model.RegisterInput
 	if tmp, ok := rawArgs["input"]; ok {
 		arg0, err = ec.unmarshalNRegisterInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐRegisterInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePreferenceSet_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.PreferenceSetInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNPreferenceSetInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSetInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1718,6 +1845,245 @@ func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.C
 	return ec.marshalNAuthResponse2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAuthResponse(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_updatePreferenceSet(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updatePreferenceSet_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdatePreferenceSet(rctx, args["input"].(model.PreferenceSetInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PreferenceSet)
+	fc.Result = res
+	return ec.marshalNPreferenceSet2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSet(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferenceSet_id(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PreferenceSet",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNID2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferenceSet_user(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PreferenceSet",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.PreferenceSet().User(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferenceSet_name(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PreferenceSet",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferenceSet_sort(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PreferenceSet",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Sort, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.SortType)
+	fc.Result = res
+	return ec.marshalNsortType2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSortType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferenceSet_startDate(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PreferenceSet",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferenceSet_endDate(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PreferenceSet",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalOTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_srcRSSFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2483,13 +2849,13 @@ func (ec *executionContext) _User_feed(ctx context.Context, field graphql.Collec
 		Object:   "User",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Feed, nil
+		return ec.resolvers.User().Feed(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2504,6 +2870,108 @@ func (ec *executionContext) _User_feed(ctx context.Context, field graphql.Collec
 	res := resTmp.(*model.UserFeed)
 	fc.Result = res
 	return ec.marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_srcRSSFeeds(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().SrcRSSFeeds(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SrcRSSFeed)
+	fc.Result = res
+	return ec.marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_preferenceSets(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().PreferenceSets(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PreferenceSet)
+	fc.Result = res
+	return ec.marshalNPreferenceSet2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSetᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_activePreferenceSet(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().ActivePreferenceSet(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PreferenceSet)
+	fc.Result = res
+	return ec.marshalNPreferenceSet2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSet(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -2572,40 +3040,6 @@ func (ec *executionContext) _User_updatedAt(ctx context.Context, field graphql.C
 	res := resTmp.(time.Time)
 	fc.Result = res
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _User_srcRSSFeeds(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "User",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().SrcRSSFeeds(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.SrcRSSFeed)
-	fc.Result = res
-	return ec.marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserFeed_userID(ctx context.Context, field graphql.CollectedField, obj *model.UserFeed) (ret graphql.Marshaler) {
@@ -3925,6 +4359,42 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj in
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPreferenceSetInput(ctx context.Context, obj interface{}) (model.PreferenceSetInput, error) {
+	var it model.PreferenceSetInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "name":
+			var err error
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "sort":
+			var err error
+			it.Sort, err = ec.unmarshalNsortType2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSortType(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "startDate":
+			var err error
+			it.StartDate, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "endDate":
+			var err error
+			it.EndDate, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRegisterInput(ctx context.Context, obj interface{}) (model.RegisterInput, error) {
 	var it model.RegisterInput
 	var asMap = obj.(map[string]interface{})
@@ -4216,6 +4686,66 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "updatePreferenceSet":
+			out.Values[i] = ec._Mutation_updatePreferenceSet(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var preferenceSetImplementors = []string{"PreferenceSet"}
+
+func (ec *executionContext) _PreferenceSet(ctx context.Context, sel ast.SelectionSet, obj *model.PreferenceSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, preferenceSetImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PreferenceSet")
+		case "id":
+			out.Values[i] = ec._PreferenceSet_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "user":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._PreferenceSet_user(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "name":
+			out.Values[i] = ec._PreferenceSet_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "sort":
+			out.Values[i] = ec._PreferenceSet_sort(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "startDate":
+			out.Values[i] = ec._PreferenceSet_startDate(ctx, field, obj)
+		case "endDate":
+			out.Values[i] = ec._PreferenceSet_endDate(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4427,20 +4957,19 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "feed":
-			out.Values[i] = ec._User_feed(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "createdAt":
-			out.Values[i] = ec._User_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "updatedAt":
-			out.Values[i] = ec._User_updatedAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_feed(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "srcRSSFeeds":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -4455,6 +4984,44 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				}
 				return res
 			})
+		case "preferenceSets":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_preferenceSets(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "activePreferenceSet":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_activePreferenceSet(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "createdAt":
+			out.Values[i] = ec._User_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._User_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4915,6 +5482,61 @@ func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋwellᚑinformed�
 	return ec.unmarshalInputLoginInput(ctx, v)
 }
 
+func (ec *executionContext) marshalNPreferenceSet2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSet(ctx context.Context, sel ast.SelectionSet, v model.PreferenceSet) graphql.Marshaler {
+	return ec._PreferenceSet(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPreferenceSet2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSetᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PreferenceSet) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPreferenceSet2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSet(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNPreferenceSet2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSet(ctx context.Context, sel ast.SelectionSet, v *model.PreferenceSet) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._PreferenceSet(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPreferenceSetInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSetInput(ctx context.Context, v interface{}) (model.PreferenceSetInput, error) {
+	return ec.unmarshalInputPreferenceSetInput(ctx, v)
+}
+
 func (ec *executionContext) unmarshalNRegisterInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐRegisterInput(ctx context.Context, v interface{}) (model.RegisterInput, error) {
 	return ec.unmarshalInputRegisterInput(ctx, v)
 }
@@ -5250,6 +5872,15 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNsortType2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSortType(ctx context.Context, v interface{}) (model.SortType, error) {
+	var res model.SortType
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNsortType2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSortType(ctx context.Context, sel ast.SelectionSet, v model.SortType) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
