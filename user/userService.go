@@ -71,7 +71,7 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 		log.Error("could not create default preference set for user. err: ", err)
 	}
 
-	token, err := auth.GenAccessToken(user.ID)
+	token, err := auth.GenAccessToken(createdUser.ID)
 	if err != nil {
 		log.Printf("error while generating the token: %v", err)
 		return nil, errors.New("something went wrong")
