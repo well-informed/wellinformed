@@ -49,8 +49,9 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
+
 			user, err := db.GetUserById(id)
-			if err != nil {
+			if err != nil || user == nil {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -60,6 +61,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 			log.Trace("setting user context value to: ", user)
 			refreshToken, err := GenRefreshToken(user.ID)
 			if err != nil {
+				log.Errorf("Error refreshing user token: %s\n", err.Error())
 				next.ServeHTTP(w, r)
 				return
 			}
