@@ -2,6 +2,7 @@ package feed
 
 import (
 	"context"
+	"errors"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed"
@@ -17,18 +18,21 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 		db: db,
 	}
 }
+
 func (f feedService) Serve(ctx context.Context, user *model.User) (*model.UserFeed, error) {
+	prefSet, err := f.db.GetPreferenceSetByName(user.ID, user.ActivePreferenceSet)
+	if err != nil {
+		return nil, errors.New("could not find user preference set")
+	}
+
 	userSources, err := f.db.ListSrcRSSFeedsByUser(user)
 	if err != nil {
 		return nil, err
 	}
-	var contentItems []*model.ContentItem
-	for _, src := range userSources {
-		srcItems, err := f.db.ListContentItemsBySource(src)
-		if err != nil {
-			log.Error("could not retrieve content for source: ", src)
-		}
-		contentItems = append(contentItems, srcItems...)
+
+	contentItems, err := f.db.ServeContentItems(userSources, prefSet.Sort, prefSet.StartDate, prefSet.EndDate)
+	if err != nil {
+		log.Error("could not serve feed. err: ", err)
 	}
 	return &model.UserFeed{
 		UserID:       user.ID,
