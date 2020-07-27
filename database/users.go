@@ -22,7 +22,7 @@ func (db DB) getUserByField(selection string, whereClause string, args ...interf
 		&user.Lastname,
 		&user.Username,
 		&user.Password,
-		&user.ActivePreferenceSet,
+		&user.ActivePreferenceSetName,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -71,7 +71,7 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 		user.Lastname,
 		user.Username,
 		user.Password,
-		user.ActivePreferenceSet,
+		user.ActivePreferenceSetName,
 		time.Now(),
 		time.Now(),
 	).Scan(&ID)
@@ -81,5 +81,37 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 	}
 	user.ID = ID
 	log.Info("got id back: ", ID)
+	return user, nil
+}
+
+func (db DB) UpdateUser(user model.User) (model.User, error) {
+	stmt, err := db.Prepare(`UPDATE users SET
+	email = $1,
+	first_name = $2,
+	last_name = $3,
+	user_name = $4,
+	password = $5,
+	active_preference_set = $6,
+	updated_at = $7`)
+	if err != nil {
+		log.Error("failed ot prepare update user: err: ", err)
+		return user, err
+	}
+
+	var ID int64
+	err = stmt.QueryRow(
+		user.Email,
+		user.Firstname,
+		user.Lastname,
+		user.Username,
+		user.Password,
+		user.ActivePreferenceSetName,
+		time.Now(),
+	).Scan(&ID)
+	if err != nil {
+		log.Error("failed to update user: err: ", err)
+		return user, err
+	}
+	user.ID = ID
 	return user, nil
 }

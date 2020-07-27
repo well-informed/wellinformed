@@ -40,11 +40,11 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 	}
 
 	user := &model.User{
-		Username:            input.Username,
-		Email:               input.Email,
-		Firstname:           input.Firstname,
-		Lastname:            input.Lastname,
-		ActivePreferenceSet: "default",
+		Username:                input.Username,
+		Email:                   input.Email,
+		Firstname:               input.Firstname,
+		Lastname:                input.Lastname,
+		ActivePreferenceSetName: "default",
 	}
 
 	hashedPassword, err := auth.HashPassword(input.Password)
@@ -62,7 +62,7 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 		return nil, err
 	}
 
-	_, err = u.db.CreatePreferenceSet(&model.PreferenceSet{
+	_, err = u.db.SavePreferenceSet(&model.PreferenceSet{
 		UserID: createdUser.ID,
 		Name:   "default",
 		Sort:   model.SortTypeChronological,
@@ -111,16 +111,32 @@ func (u *UserService) Login(ctx context.Context, input model.LoginInput) (*model
 	}, nil
 }
 
-func (u *UserService) UpdatePreferenceSet(ctx context.Context, input *model.PreferenceSetInput) (*model.PreferenceSet, error) {
+func (u *UserService) SavePreferenceSet(ctx context.Context, input *model.PreferenceSetInput) (*model.PreferenceSet, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Error("user not logged in. err: ", err)
 		return nil, err
 	}
-	newPrefSet, err := u.db.UpdatePreferenceSet(user.ID, input.Name, input)
+
+	prefSet := &model.PreferenceSet{
+		UserID:    user.ID,
+		Name:      input.Name,
+		Sort:      input.Sort,
+		StartDate: input.StartDate,
+		EndDate:   input.EndDate,
+	}
+
+	updatedPrefSet, err := u.db.SavePreferenceSet(prefSet)
 	if err != nil {
 		log.Error("couldn't update preferenceSet. err: ", err)
 		return nil, err
 	}
-	return newPrefSet, nil
+	if input.Active == true {
+		if user.ActivePreferenceSetName != updatedPrefSet.Name {
+			user.ActivePreferenceSetName = updatedPrefSet.Name
+			u.db.UpdateUser(*user)
+		}
+	}
+
+	return updatedPrefSet, nil
 }

@@ -20,7 +20,7 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 }
 
 func (f feedService) Serve(ctx context.Context, user *model.User) (*model.UserFeed, error) {
-	prefSet, err := f.db.GetPreferenceSetByName(user.ID, user.ActivePreferenceSet)
+	prefSet, err := f.db.GetPreferenceSetByName(user.ID, user.ActivePreferenceSetName)
 	if err != nil {
 		return nil, errors.New("could not find user preference set")
 	}

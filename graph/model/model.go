@@ -15,21 +15,22 @@ type SrcRSSFeed struct {
 }
 
 type User struct {
-	ID                  int64     `json:"id"`
-	Firstname           string    `json:"firstname"`
-	Lastname            string    `json:"lastname"`
-	Username            string    `json:"username"`
-	Email               string    `json:"email"`
-	Password            string    `json:"password"`
-	ActivePreferenceSet string    `json:"activePreferenceSet"`
-	CreatedAt           time.Time `json:"createdAt"`
-	UpdatedAt           time.Time `json:"updatedAt"`
+	ID                      int64     `json:"id"`
+	Firstname               string    `json:"firstname"`
+	Lastname                string    `json:"lastname"`
+	Username                string    `json:"username"`
+	Email                   string    `json:"email"`
+	Password                string    `json:"password"`
+	ActivePreferenceSetName string    `json:"activePreferenceSet"`
+	CreatedAt               time.Time `json:"createdAt"`
+	UpdatedAt               time.Time `json:"updatedAt"`
 }
 
 type PreferenceSet struct {
 	ID        int64      `json:"id"`
 	UserID    int64      `json:"user" db:"user_id"`
 	Name      string     `json:"name"`
+	Active    bool       `json:"name"`
 	Sort      SortType   `json:"sort"`
 	StartDate *time.Time `json:"startDate" db:"start_date"`
 	EndDate   *time.Time `json:"endDate" db:"end_date"`

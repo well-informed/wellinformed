@@ -73,6 +73,7 @@ type PreferenceSet {
   id: ID!
   user: User!
   name: String!
+  active: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time
@@ -80,6 +81,7 @@ type PreferenceSet {
 
 input PreferenceSetInput {
   name: String!
+  active: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time
@@ -115,6 +117,7 @@ type Query {
   userFeed: UserFeed!
   getUser: User!
   getContentItem(input: ID!): ContentItem!
+  preferenceSets: [PreferenceSet!]!
 }
 
 type DeleteResponse {
@@ -126,5 +129,5 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
-  updatePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
+  savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }

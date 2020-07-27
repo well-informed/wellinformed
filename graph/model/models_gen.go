@@ -30,6 +30,7 @@ type LoginInput struct {
 
 type PreferenceSetInput struct {
 	Name      string     `json:"name"`
+	Active    bool       `json:"active"`
 	Sort      SortType   `json:"sort"`
 	StartDate *time.Time `json:"startDate"`
 	EndDate   *time.Time `json:"endDate"`
