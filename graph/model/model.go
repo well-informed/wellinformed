@@ -30,7 +30,6 @@ type PreferenceSet struct {
 	ID        int64      `json:"id"`
 	UserID    int64      `json:"user" db:"user_id"`
 	Name      string     `json:"name"`
-	Active    bool       `json:"name"`
 	Sort      SortType   `json:"sort"`
 	StartDate *time.Time `json:"startDate" db:"start_date"`
 	EndDate   *time.Time `json:"endDate" db:"end_date"`

@@ -81,7 +81,9 @@ type PreferenceSet {
 
 input PreferenceSetInput {
   name: String!
-  active: Boolean!
+  """true sets the entered preference set as active, false never has any effect.
+  A prefSet can only become inactive if another prefSet is set to active"""
+  activate: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time

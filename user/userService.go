@@ -131,7 +131,7 @@ func (u *UserService) SavePreferenceSet(ctx context.Context, input *model.Prefer
 		log.Error("couldn't update preferenceSet. err: ", err)
 		return nil, err
 	}
-	if input.Active == true {
+	if input.Activate == true {
 		if user.ActivePreferenceSetName != updatedPrefSet.Name {
 			user.ActivePreferenceSetName = updatedPrefSet.Name
 			u.db.UpdateUser(*user)

@@ -835,7 +835,9 @@ type PreferenceSet {
 
 input PreferenceSetInput {
   name: String!
-  active: Boolean!
+  """true sets the entered preference set as active, false never has any effect.
+  A prefSet can only become inactive if another prefSet is set to active"""
+  activate: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time
@@ -4461,9 +4463,9 @@ func (ec *executionContext) unmarshalInputPreferenceSetInput(ctx context.Context
 			if err != nil {
 				return it, err
 			}
-		case "active":
+		case "activate":
 			var err error
-			it.Active, err = ec.unmarshalNBoolean2bool(ctx, v)
+			it.Activate, err = ec.unmarshalNBoolean2bool(ctx, v)
 			if err != nil {
 				return it, err
 			}
