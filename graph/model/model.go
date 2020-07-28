@@ -26,6 +26,13 @@ type User struct {
 	UpdatedAt               time.Time `json:"updatedAt"`
 }
 
+type UserSubscription struct {
+	ID           int64     `json:"id"`
+	UserID       int64     `json:"userID" db:"user_id"`
+	SrcRSSFeedID int64     `json:"srcRSSFeed" db:"source_id"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+}
+
 type PreferenceSet struct {
 	ID        int64      `json:"id"`
 	UserID    int64      `json:"user" db:"user_id"`

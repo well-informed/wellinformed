@@ -58,7 +58,7 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 	return &contentItem, nil
 }
 
-func (db DB) SelectContentItem(id int64) (*model.ContentItem, error) {
+func (db DB) GetContentItem(id int64) (*model.ContentItem, error) {
 	stmt := `SELECT * FROM content_items WHERE id = $1`
 
 	var contentItem model.ContentItem

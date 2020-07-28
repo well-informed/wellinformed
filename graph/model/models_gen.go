@@ -59,13 +59,6 @@ type UserFeed struct {
 	ContentItems []*ContentItem `json:"contentItems"`
 }
 
-type UserSubscription struct {
-	ID         int64     `json:"id"`
-	UserID     int64     `json:"userID"`
-	SrcRSSFeed int64     `json:"srcRSSFeed"`
-	CreatedAt  time.Time `json:"createdAt"`
-}
-
 type SortType string
 
 const (
