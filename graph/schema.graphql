@@ -120,7 +120,8 @@ type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   sources: [SrcRSSFeed!]!
   userFeed: UserFeed!
-  getUser: User!
+  me: User!
+  user(userID: ID!): User!
   getContentItem(input: ID!): ContentItem!
   preferenceSets: [PreferenceSet!]!
 }
