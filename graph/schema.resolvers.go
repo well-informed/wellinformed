@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"net/url"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
@@ -18,6 +19,16 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	if err != nil {
 		return nil, err
 	}
+
+	link, err := url.Parse(feedLink)
+	if err != nil {
+		log.Error("couldn't parse feedLink: ", feedLink)
+		return nil, errors.New("couldn't parse feedLink")
+	}
+	if link.Scheme == "" {
+		link.Scheme = "https"
+	}
+	feedLink = link.String()
 
 	existingFeed, err := r.DB.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
