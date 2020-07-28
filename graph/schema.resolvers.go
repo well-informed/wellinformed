@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
@@ -91,14 +90,30 @@ func (r *preferenceSetResolver) Active(ctx context.Context, obj *model.Preferenc
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
+	_, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
 	feed, err := r.DB.SelectSrcRSSFeed(*input)
 	if err != nil {
 		return nil, err
 	}
+	log.Info("retrieved feed: ", feed)
+	if feed == nil {
+		return nil, errors.New("srcRSSFeed not found")
+	}
 	return feed, nil
+}
+
+func (r *queryResolver) Sources(ctx context.Context) ([]*model.SrcRSSFeed, error) {
+	sources, err := r.DB.ListSrcRSSFeeds()
+	if err != nil {
+		return nil, err
+	}
+	if sources == nil {
+		return nil, errors.New("no sources exist")
+	}
+	return sources, nil
 }
 
 func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
@@ -147,6 +162,21 @@ func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSS
 		return nil, err
 	}
 	return contentItems, nil
+}
+
+func (r *srcRSSFeedResolver) IsSubscribed(ctx context.Context, obj *model.SrcRSSFeed) (bool, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return false, err
+	}
+	subscription, err := r.DB.SelectUserSubscription(user.ID, obj.ID)
+	if err != nil {
+		return false, err
+	}
+	if subscription == nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFeed, error) {

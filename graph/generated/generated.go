@@ -101,6 +101,7 @@ type ComplexityRoot struct {
 		GetContentItem func(childComplexity int, input int64) int
 		GetUser        func(childComplexity int) int
 		PreferenceSets func(childComplexity int) int
+		Sources        func(childComplexity int) int
 		SrcRSSFeed     func(childComplexity int, input *model.SrcRSSFeedInput) int
 		UserFeed       func(childComplexity int) int
 	}
@@ -111,6 +112,7 @@ type ComplexityRoot struct {
 		FeedLink      func(childComplexity int) int
 		Generator     func(childComplexity int) int
 		ID            func(childComplexity int) int
+		IsSubscribed  func(childComplexity int) int
 		Language      func(childComplexity int) int
 		LastFetchedAt func(childComplexity int) int
 		Link          func(childComplexity int) int
@@ -161,6 +163,7 @@ type PreferenceSetResolver interface {
 }
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
+	Sources(ctx context.Context) ([]*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context) (*model.UserFeed, error)
 	GetUser(ctx context.Context) (*model.User, error)
 	GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error)
@@ -168,6 +171,7 @@ type QueryResolver interface {
 }
 type SrcRSSFeedResolver interface {
 	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
+	IsSubscribed(ctx context.Context, obj *model.SrcRSSFeed) (bool, error)
 }
 type UserResolver interface {
 	Feed(ctx context.Context, obj *model.User) (*model.UserFeed, error)
@@ -466,6 +470,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.PreferenceSets(childComplexity), true
 
+	case "Query.sources":
+		if e.complexity.Query.Sources == nil {
+			break
+		}
+
+		return e.complexity.Query.Sources(childComplexity), true
+
 	case "Query.srcRSSFeed":
 		if e.complexity.Query.SrcRSSFeed == nil {
 			break
@@ -519,6 +530,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SrcRSSFeed.ID(childComplexity), true
+
+	case "SrcRSSFeed.isSubscribed":
+		if e.complexity.SrcRSSFeed.IsSubscribed == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeed.IsSubscribed(childComplexity), true
 
 	case "SrcRSSFeed.language":
 		if e.complexity.SrcRSSFeed.Language == nil {
@@ -775,6 +793,7 @@ type SrcRSSFeed {
   language: String
   generator: String
   contentItems: [ContentItem!]!
+  isSubscribed: Boolean!
 }
 
 type ContentItem {
@@ -870,6 +889,7 @@ input LoginInput {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
+  sources: [SrcRSSFeed!]!
   userFeed: UserFeed!
   getUser: User!
   getContentItem(input: ID!): ContentItem!
@@ -2183,6 +2203,40 @@ func (ec *executionContext) _Query_srcRSSFeed(ctx context.Context, field graphql
 	return ec.marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_sources(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Sources(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SrcRSSFeed)
+	fc.Result = res
+	return ec.marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_userFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2724,6 +2778,40 @@ func (ec *executionContext) _SrcRSSFeed_contentItems(ctx context.Context, field 
 	res := resTmp.([]*model.ContentItem)
 	fc.Result = res
 	return ec.marshalNContentItem2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeed_isSubscribed(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeed",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.SrcRSSFeed().IsSubscribed(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -4898,6 +4986,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}
 				return res
 			})
+		case "sources":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_sources(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "userFeed":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -5025,6 +5127,20 @@ func (ec *executionContext) _SrcRSSFeed(ctx context.Context, sel ast.SelectionSe
 					}
 				}()
 				res = ec._SrcRSSFeed_contentItems(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "isSubscribed":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SrcRSSFeed_isSubscribed(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
