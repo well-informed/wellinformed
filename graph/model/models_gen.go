@@ -29,7 +29,10 @@ type LoginInput struct {
 }
 
 type PreferenceSetInput struct {
-	Name      string     `json:"name"`
+	Name string `json:"name"`
+	// true sets the entered preference set as active, false never has any effect.
+	//   A prefSet can only become inactive if another prefSet is set to active
+	Activate  bool       `json:"activate"`
 	Sort      SortType   `json:"sort"`
 	StartDate *time.Time `json:"startDate"`
 	EndDate   *time.Time `json:"endDate"`

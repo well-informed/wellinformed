@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -72,12 +71,23 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	return r.UserService.Login(ctx, input)
 }
 
-func (r *mutationResolver) UpdatePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
-	return r.UserService.UpdatePreferenceSet(ctx, &input)
+func (r *mutationResolver) SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
+	return r.UserService.SavePreferenceSet(ctx, &input)
 }
 
 func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
 	return r.DB.GetUserById(obj.UserID)
+}
+
+func (r *preferenceSetResolver) Active(ctx context.Context, obj *model.PreferenceSet) (bool, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return false, err
+	}
+	if user.ActivePreferenceSetName == obj.Name {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -122,6 +132,14 @@ func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model
 	return contentItem, nil
 }
 
+func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.DB.ListPreferenceSetsByUser(user.ID)
+}
+
 func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("resolving ContentItems")
 	contentItems, err := r.DB.ListContentItemsBySource(obj)
@@ -144,7 +162,7 @@ func (r *userResolver) PreferenceSets(ctx context.Context, obj *model.User) ([]*
 }
 
 func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error) {
-	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSet)
+	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSetName)
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -167,13 +185,3 @@ type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *mutationResolver) ChangeActivePreferenceSet(ctx context.Context, input string) (*model.PreferenceSet, error) {
-	panic(fmt.Errorf("not implemented"))
-}

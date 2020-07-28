@@ -80,14 +80,15 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddSrcRSSFeed       func(childComplexity int, feedLink string) int
-		DeleteSubscription  func(childComplexity int, srcRssfeedID int64) int
-		Login               func(childComplexity int, input model.LoginInput) int
-		Register            func(childComplexity int, input model.RegisterInput) int
-		UpdatePreferenceSet func(childComplexity int, input model.PreferenceSetInput) int
+		AddSrcRSSFeed      func(childComplexity int, feedLink string) int
+		DeleteSubscription func(childComplexity int, srcRssfeedID int64) int
+		Login              func(childComplexity int, input model.LoginInput) int
+		Register           func(childComplexity int, input model.RegisterInput) int
+		SavePreferenceSet  func(childComplexity int, input model.PreferenceSetInput) int
 	}
 
 	PreferenceSet struct {
+		Active    func(childComplexity int) int
 		EndDate   func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Name      func(childComplexity int) int
@@ -99,6 +100,7 @@ type ComplexityRoot struct {
 	Query struct {
 		GetContentItem func(childComplexity int, input int64) int
 		GetUser        func(childComplexity int) int
+		PreferenceSets func(childComplexity int) int
 		SrcRSSFeed     func(childComplexity int, input *model.SrcRSSFeedInput) int
 		UserFeed       func(childComplexity int) int
 	}
@@ -150,16 +152,19 @@ type MutationResolver interface {
 	DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
-	UpdatePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error)
+	SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error)
 }
 type PreferenceSetResolver interface {
 	User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error)
+
+	Active(ctx context.Context, obj *model.PreferenceSet) (bool, error)
 }
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context) (*model.UserFeed, error)
 	GetUser(ctx context.Context) (*model.User, error)
 	GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error)
+	PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error)
 }
 type SrcRSSFeedResolver interface {
 	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
@@ -374,17 +379,24 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.Register(childComplexity, args["input"].(model.RegisterInput)), true
 
-	case "Mutation.updatePreferenceSet":
-		if e.complexity.Mutation.UpdatePreferenceSet == nil {
+	case "Mutation.savePreferenceSet":
+		if e.complexity.Mutation.SavePreferenceSet == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_updatePreferenceSet_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_savePreferenceSet_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdatePreferenceSet(childComplexity, args["input"].(model.PreferenceSetInput)), true
+		return e.complexity.Mutation.SavePreferenceSet(childComplexity, args["input"].(model.PreferenceSetInput)), true
+
+	case "PreferenceSet.active":
+		if e.complexity.PreferenceSet.Active == nil {
+			break
+		}
+
+		return e.complexity.PreferenceSet.Active(childComplexity), true
 
 	case "PreferenceSet.endDate":
 		if e.complexity.PreferenceSet.EndDate == nil {
@@ -446,6 +458,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetUser(childComplexity), true
+
+	case "Query.preferenceSets":
+		if e.complexity.Query.PreferenceSets == nil {
+			break
+		}
+
+		return e.complexity.Query.PreferenceSets(childComplexity), true
 
 	case "Query.srcRSSFeed":
 		if e.complexity.Query.SrcRSSFeed == nil {
@@ -808,6 +827,7 @@ type PreferenceSet {
   id: ID!
   user: User!
   name: String!
+  active: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time
@@ -815,6 +835,9 @@ type PreferenceSet {
 
 input PreferenceSetInput {
   name: String!
+  """true sets the entered preference set as active, false never has any effect.
+  A prefSet can only become inactive if another prefSet is set to active"""
+  activate: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time
@@ -850,6 +873,7 @@ type Query {
   userFeed: UserFeed!
   getUser: User!
   getContentItem(input: ID!): ContentItem!
+  preferenceSets: [PreferenceSet!]!
 }
 
 type DeleteResponse {
@@ -861,7 +885,7 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
-  updatePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
+  savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }
 `, BuiltIn: false},
 }
@@ -927,7 +951,7 @@ func (ec *executionContext) field_Mutation_register_args(ctx context.Context, ra
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_updatePreferenceSet_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_savePreferenceSet_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 model.PreferenceSetInput
@@ -1845,7 +1869,7 @@ func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.C
 	return ec.marshalNAuthResponse2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAuthResponse(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Mutation_updatePreferenceSet(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_savePreferenceSet(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1861,7 +1885,7 @@ func (ec *executionContext) _Mutation_updatePreferenceSet(ctx context.Context, f
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_updatePreferenceSet_args(ctx, rawArgs)
+	args, err := ec.field_Mutation_savePreferenceSet_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -1869,7 +1893,7 @@ func (ec *executionContext) _Mutation_updatePreferenceSet(ctx context.Context, f
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdatePreferenceSet(rctx, args["input"].(model.PreferenceSetInput))
+		return ec.resolvers.Mutation().SavePreferenceSet(rctx, args["input"].(model.PreferenceSetInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1986,6 +2010,40 @@ func (ec *executionContext) _PreferenceSet_name(ctx context.Context, field graph
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PreferenceSet_active(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PreferenceSet",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.PreferenceSet().Active(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _PreferenceSet_sort(ctx context.Context, field graphql.CollectedField, obj *model.PreferenceSet) (ret graphql.Marshaler) {
@@ -2232,6 +2290,40 @@ func (ec *executionContext) _Query_getContentItem(ctx context.Context, field gra
 	res := resTmp.(*model.ContentItem)
 	fc.Result = res
 	return ec.marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_preferenceSets(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PreferenceSets(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PreferenceSet)
+	fc.Result = res
+	return ec.marshalNPreferenceSet2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSetᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -4371,6 +4463,12 @@ func (ec *executionContext) unmarshalInputPreferenceSetInput(ctx context.Context
 			if err != nil {
 				return it, err
 			}
+		case "activate":
+			var err error
+			it.Activate, err = ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "sort":
 			var err error
 			it.Sort, err = ec.unmarshalNsortType2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSortType(ctx, v)
@@ -4686,8 +4784,8 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "updatePreferenceSet":
-			out.Values[i] = ec._Mutation_updatePreferenceSet(ctx, field)
+		case "savePreferenceSet":
+			out.Values[i] = ec._Mutation_savePreferenceSet(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4737,6 +4835,20 @@ func (ec *executionContext) _PreferenceSet(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "active":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._PreferenceSet_active(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "sort":
 			out.Values[i] = ec._PreferenceSet_sort(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4823,6 +4935,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getContentItem(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "preferenceSets":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_preferenceSets(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
