@@ -19,7 +19,7 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 		return nil, err
 	}
 
-	existingFeed, err := r.DB.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
+	existingFeed, err := r.DB.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	if err != nil {
 		return nil, err
 	}
-	feed, err := r.DB.SelectSrcRSSFeed(*input)
+	feed, err := r.DB.GetSrcRSSFeed(*input)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model
 	if err != nil {
 		return nil, errors.New("user not signed in")
 	}
-	contentItem, err := r.DB.SelectContentItem(input)
+	contentItem, err := r.DB.GetContentItem(input)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (r *srcRSSFeedResolver) IsSubscribed(ctx context.Context, obj *model.SrcRSS
 	if err != nil {
 		return false, err
 	}
-	subscription, err := r.DB.SelectUserSubscription(user.ID, obj.ID)
+	subscription, err := r.DB.GetUserSubscription(user.ID, obj.ID)
 	if err != nil {
 		return false, err
 	}
@@ -195,6 +195,34 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSetName)
 }
 
+func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.DB.ListUserSubscriptions(user.ID)
+}
+
+func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
+	user, err := r.DB.GetUserById(obj.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("subscription's userID not found")
+	}
+	return user, nil
+}
+
+func (r *userSubscriptionResolver) SrcRSSFeed(ctx context.Context, obj *model.UserSubscription) (*model.SrcRSSFeed, error) {
+	input := model.SrcRSSFeedInput{ID: &obj.SrcRSSFeedID}
+	src, err := r.DB.GetSrcRSSFeed(input)
+	if err != nil {
+		return nil, err
+	}
+	return src, nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
@@ -210,8 +238,14 @@ func (r *Resolver) SrcRSSFeed() generated.SrcRSSFeedResolver { return &srcRSSFee
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
+// UserSubscription returns generated.UserSubscriptionResolver implementation.
+func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
+	return &userSubscriptionResolver{r}
+}
+
 type mutationResolver struct{ *Resolver }
 type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
+type userSubscriptionResolver struct{ *Resolver }

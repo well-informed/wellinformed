@@ -84,7 +84,7 @@ func (sub *subscriber) updateSrcRSSFeed(ctx context.Context, feedLink string) (*
 		return nil, err
 	}
 	var storedFeed *model.SrcRSSFeed
-	storedFeed, err = sub.db.SelectSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
+	storedFeed, err = sub.db.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (sub *subscriber) updateSrcRSSFeed(ctx context.Context, feedLink string) (*
 }
 
 func (sub *subscriber) AddUserSubscription(user *model.User, srcRSSFeed *model.SrcRSSFeed) (*model.UserSubscription, error) {
-	userSub, err := sub.db.SelectUserSubscription(user.ID, srcRSSFeed.ID)
+	userSub, err := sub.db.GetUserSubscription(user.ID, srcRSSFeed.ID)
 	if err != nil {
 		return nil, err
 	}
