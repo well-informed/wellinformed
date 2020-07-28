@@ -21,6 +21,7 @@ type SrcRSSFeed {
   language: String
   generator: String
   contentItems: [ContentItem!]!
+  isSubscribed: Boolean!
 }
 
 type ContentItem {
@@ -116,6 +117,7 @@ input LoginInput {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
+  sources: [SrcRSSFeed!]!
   userFeed: UserFeed!
   getUser: User!
   getContentItem(input: ID!): ContentItem!
