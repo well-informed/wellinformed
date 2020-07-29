@@ -155,11 +155,17 @@ func RefreshToken(db wellinformed.Persistor) http.HandlerFunc {
 			return
 		}
 
-		user, err := db.GetUserById(claims["jti"].(int64))
+		id, err := strconv.ParseInt(claims["jti"].(string), 10, 64)
+		if err != nil {
+			log.Error("could not parse claim into int. err: ", err)
+			w.Write(errJsonRes)
+			return
+		}
+		user, err := db.GetUserById(id)
 
 		log.Printf("user: %v", user)
 
-		if err != nil {
+		if err != nil || user == nil {
 			log.Printf("err getting user from db: %v", err)
 			w.Write(errJsonRes)
 			return
