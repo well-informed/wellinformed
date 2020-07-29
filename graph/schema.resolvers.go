@@ -126,13 +126,24 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 	return r.Feed.Serve(ctx, currentUser)
 }
 
-func (r *queryResolver) GetUser(ctx context.Context) (*model.User, error) {
+func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Printf("error while getting user feed: %v", err)
 		return nil, errors.New("You are not signed in!")
 	}
 	return currentUser, nil
+}
+
+func (r *queryResolver) User(ctx context.Context, userID int64) (*model.User, error) {
+	user, err := r.DB.GetUserById(userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+	return user, nil
 }
 
 func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error) {
@@ -249,3 +260,10 @@ type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
 type userSubscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
