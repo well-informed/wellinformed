@@ -13,7 +13,7 @@ var tables = []table{
 		sql: `
 	CREATE TABLE IF NOT EXISTS users
 	( id BIGSERIAL PRIMARY KEY,
-		email varchar NOT NULL,
+		email varchar NOT NULL UNIQUE,
 		first_name varchar NOT NULL,
 		last_name varchar NOT NULL,
 		user_name varchar NOT NULL,

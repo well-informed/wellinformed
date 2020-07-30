@@ -23,6 +23,12 @@ type DeleteResponse struct {
 	Ok bool `json:"ok"`
 }
 
+type GetUserInput struct {
+	UserID   *int64  `json:"userID"`
+	Email    *string `json:"email"`
+	Username *string `json:"username"`
+}
+
 type HistoryInput struct {
 	ContentItemID int64     `json:"contentItemID"`
 	ReadState     ReadState `json:"readState"`
@@ -35,7 +41,10 @@ type LoginInput struct {
 }
 
 type PreferenceSetInput struct {
-	Name      string     `json:"name"`
+	Name string `json:"name"`
+	// true sets the entered preference set as active, false never has any effect.
+	// A prefSet can only become inactive if another prefSet is set to active
+	Activate  bool       `json:"activate"`
 	Sort      SortType   `json:"sort"`
 	StartDate *time.Time `json:"startDate"`
 	EndDate   *time.Time `json:"endDate"`
@@ -60,13 +69,6 @@ type UserFeed struct {
 	UserID       int64          `json:"userID"`
 	Name         string         `json:"name"`
 	ContentItems []*ContentItem `json:"contentItems"`
-}
-
-type UserSubscription struct {
-	ID         int64     `json:"id"`
-	UserID     int64     `json:"userID"`
-	SrcRSSFeed int64     `json:"srcRSSFeed"`
-	CreatedAt  time.Time `json:"createdAt"`
 }
 
 type ReadState string

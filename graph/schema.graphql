@@ -21,6 +21,7 @@ type SrcRSSFeed {
   language: String
   generator: String
   contentItems: [ContentItem!]!
+  isSubscribed: Boolean!
 }
 
 type ContentItem {
@@ -43,8 +44,8 @@ type ContentItem {
 
 type UserSubscription {
   id: ID!
-  userID: ID!
-  srcRSSFeed: ID!
+  user: User!
+  srcRSSFeed: SrcRSSFeed!
   createdAt: Time!
 }
 
@@ -68,12 +69,14 @@ type User {
   history: [History!]
   createdAt: Time!
   updatedAt: Time!
+  subscriptions: [UserSubscription!]
 }
 
 type PreferenceSet {
   id: ID!
   user: User!
   name: String!
+  active: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time
@@ -81,6 +84,11 @@ type PreferenceSet {
 
 input PreferenceSetInput {
   name: String!
+  """
+  true sets the entered preference set as active, false never has any effect.
+  A prefSet can only become inactive if another prefSet is set to active
+  """
+  activate: Boolean!
   sort: sortType!
   startDate: Time
   endDate: Time
@@ -132,12 +140,21 @@ input LoginInput {
   password: String!
 }
 
+input GetUserInput {
+  userID: ID
+  email: String
+  username: String
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
+  sources: [SrcRSSFeed!]!
   userFeed: UserFeed!
-  getUser: User!
+  me: User!
+  user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
   getHistoryByContentID(input: ID!): History!
+  preferenceSets: [PreferenceSet!]!
 }
 
 type DeleteResponse {
@@ -149,6 +166,6 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
-  updatePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
   saveHistory(input: HistoryInput): History!
+  savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }
