@@ -146,8 +146,20 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	return currentUser, nil
 }
 
-func (r *queryResolver) User(ctx context.Context, userID int64) (*model.User, error) {
-	user, err := r.DB.GetUserById(userID)
+func (r *queryResolver) User(ctx context.Context, input *model.GetUserInput) (*model.User, error) {
+	var user *model.User
+	var err error
+
+	if input.UserID != nil {
+		user, err = r.DB.GetUserById(*input.UserID)
+	} else if input.Email != nil {
+		user, err = r.DB.GetUserByEmail(*input.Email)
+	} else if input.Username != nil {
+		user, err = r.DB.GetUserByUsername(*input.Username)
+	} else {
+		return nil, errors.New("You need to provide an input")
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -271,10 +283,3 @@ type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
 type userSubscriptionResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.

@@ -23,6 +23,12 @@ type DeleteResponse struct {
 	Ok bool `json:"ok"`
 }
 
+type GetUserInput struct {
+	UserID   *int64  `json:"userID"`
+	Email    *string `json:"email"`
+	Username *string `json:"username"`
+}
+
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -31,7 +37,7 @@ type LoginInput struct {
 type PreferenceSetInput struct {
 	Name string `json:"name"`
 	// true sets the entered preference set as active, false never has any effect.
-	//   A prefSet can only become inactive if another prefSet is set to active
+	// A prefSet can only become inactive if another prefSet is set to active
 	Activate  bool       `json:"activate"`
 	Sort      SortType   `json:"sort"`
 	StartDate *time.Time `json:"startDate"`
