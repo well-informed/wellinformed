@@ -83,8 +83,10 @@ type PreferenceSet {
 
 input PreferenceSetInput {
   name: String!
-  """true sets the entered preference set as active, false never has any effect.
-  A prefSet can only become inactive if another prefSet is set to active"""
+  """
+  true sets the entered preference set as active, false never has any effect.
+  A prefSet can only become inactive if another prefSet is set to active
+  """
   activate: Boolean!
   sort: sortType!
   startDate: Time
@@ -116,12 +118,18 @@ input LoginInput {
   password: String!
 }
 
+input GetUserInput {
+  userID: ID
+  email: String
+  username: String
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   sources: [SrcRSSFeed!]!
   userFeed: UserFeed!
   me: User!
-  user(userID: ID!): User!
+  user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
   preferenceSets: [PreferenceSet!]!
 }

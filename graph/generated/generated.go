@@ -104,7 +104,7 @@ type ComplexityRoot struct {
 		PreferenceSets func(childComplexity int) int
 		Sources        func(childComplexity int) int
 		SrcRSSFeed     func(childComplexity int, input *model.SrcRSSFeedInput) int
-		User           func(childComplexity int, userID int64) int
+		User           func(childComplexity int, input *model.GetUserInput) int
 		UserFeed       func(childComplexity int) int
 	}
 
@@ -169,7 +169,7 @@ type QueryResolver interface {
 	Sources(ctx context.Context) ([]*model.SrcRSSFeed, error)
 	UserFeed(ctx context.Context) (*model.UserFeed, error)
 	Me(ctx context.Context) (*model.User, error)
-	User(ctx context.Context, userID int64) (*model.User, error)
+	User(ctx context.Context, input *model.GetUserInput) (*model.User, error)
 	GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error)
 	PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error)
 }
@@ -509,7 +509,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.User(childComplexity, args["userID"].(int64)), true
+		return e.complexity.Query.User(childComplexity, args["input"].(*model.GetUserInput)), true
 
 	case "Query.userFeed":
 		if e.complexity.Query.UserFeed == nil {
@@ -884,8 +884,10 @@ type PreferenceSet {
 
 input PreferenceSetInput {
   name: String!
-  """true sets the entered preference set as active, false never has any effect.
-  A prefSet can only become inactive if another prefSet is set to active"""
+  """
+  true sets the entered preference set as active, false never has any effect.
+  A prefSet can only become inactive if another prefSet is set to active
+  """
   activate: Boolean!
   sort: sortType!
   startDate: Time
@@ -917,12 +919,18 @@ input LoginInput {
   password: String!
 }
 
+input GetUserInput {
+  userID: ID
+  email: String
+  username: String
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   sources: [SrcRSSFeed!]!
   userFeed: UserFeed!
   me: User!
-  user(userID: ID!): User!
+  user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
   preferenceSets: [PreferenceSet!]!
 }
@@ -1061,14 +1069,14 @@ func (ec *executionContext) field_Query_srcRSSFeed_args(ctx context.Context, raw
 func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 int64
-	if tmp, ok := rawArgs["userID"]; ok {
-		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
+	var arg0 *model.GetUserInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOGetUserInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐGetUserInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["userID"] = arg0
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -2374,7 +2382,7 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().User(rctx, args["userID"].(int64))
+		return ec.resolvers.Query().User(rctx, args["input"].(*model.GetUserInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4632,6 +4640,36 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputGetUserInput(ctx context.Context, obj interface{}) (model.GetUserInput, error) {
+	var it model.GetUserInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "userID":
+			var err error
+			it.UserID, err = ec.unmarshalOID2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "email":
+			var err error
+			it.Email, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "username":
+			var err error
+			it.Username, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj interface{}) (model.LoginInput, error) {
 	var it model.LoginInput
 	var asMap = obj.(map[string]interface{})
@@ -6320,6 +6358,18 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return ec.marshalOBoolean2bool(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOGetUserInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐGetUserInput(ctx context.Context, v interface{}) (model.GetUserInput, error) {
+	return ec.unmarshalInputGetUserInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOGetUserInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐGetUserInput(ctx context.Context, v interface{}) (*model.GetUserInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOGetUserInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐGetUserInput(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) unmarshalOID2int64(ctx context.Context, v interface{}) (int64, error) {
