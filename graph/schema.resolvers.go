@@ -138,6 +138,20 @@ func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model
 	return contentItem, nil
 }
 
+func (r *queryResolver) GetHistoryByContentID(ctx context.Context, input int64) (*model.History, error) {
+	log.Debug("resolving GetHistoryByContentID")
+	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user history: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+	history, err := r.DB.GetHistoryByContentID(currentUser.ID, input)
+	if err != nil {
+		return nil, err
+	}
+	return history, nil
+}
+
 func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("resolving ContentItems")
 	contentItems, err := r.DB.ListContentItemsBySource(obj)
