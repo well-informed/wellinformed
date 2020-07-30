@@ -42,7 +42,7 @@ func (db DB) GetUserByUsername(value string) (*model.User, error) {
 	return db.getUserByField("*", "user_name = $1", value)
 }
 
-func (db DB) GetUserById(value int64) (*model.User, error) {
+func (db DB) GetUserByID(value int64) (*model.User, error) {
 	return db.getUserByField("*", "id = $1", value)
 }
 

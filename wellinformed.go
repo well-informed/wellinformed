@@ -22,7 +22,7 @@ type Persistor interface {
 	ServeContentItems([]*model.SrcRSSFeed, model.SortType, *time.Time, *time.Time) ([]*model.ContentItem, error)
 	GetUserByEmail(email string) (*model.User, error)
 	GetUserByUsername(username string) (*model.User, error)
-	GetUserById(id int64) (*model.User, error)
+	GetUserByID(id int64) (*model.User, error)
 	CreateUser(user model.User) (model.User, error)
 	UpdateUser(user model.User) (model.User, error)
 	SavePreferenceSet(prefSet *model.PreferenceSet) (*model.PreferenceSet, error)

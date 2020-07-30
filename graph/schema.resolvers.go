@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
@@ -16,11 +15,15 @@ import (
 )
 
 func (r *historyResolver) User(ctx context.Context, obj *model.History) (*model.User, error) {
-	panic(fmt.Errorf("not implemented"))
+	user, err := r.DB.GetUserByID(obj.UserID)
+	if user == nil {
+		return nil, errors.New("user does not exist in history entry")
+	}
+	return user, err
 }
 
 func (r *historyResolver) ContentItem(ctx context.Context, obj *model.History) (*model.ContentItem, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.DB.GetContentItem(obj.ContentItemID)
 }
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
@@ -103,7 +106,7 @@ func (r *mutationResolver) SavePreferenceSet(ctx context.Context, input model.Pr
 }
 
 func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
-	return r.DB.GetUserById(obj.UserID)
+	return r.DB.GetUserByID(obj.UserID)
 }
 
 func (r *preferenceSetResolver) Active(ctx context.Context, obj *model.PreferenceSet) (bool, error) {
@@ -168,7 +171,7 @@ func (r *queryResolver) User(ctx context.Context, input *model.GetUserInput) (*m
 	var err error
 
 	if input.UserID != nil {
-		user, err = r.DB.GetUserById(*input.UserID)
+		user, err = r.DB.GetUserByID(*input.UserID)
 	} else if input.Email != nil {
 		user, err = r.DB.GetUserByEmail(*input.Email)
 	} else if input.Username != nil {
@@ -261,7 +264,7 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 }
 
 func (r *userResolver) History(ctx context.Context, obj *model.User) ([]*model.History, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.DB.ListUserHistory(obj.ID)
 }
 
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
@@ -273,7 +276,7 @@ func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*m
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
-	user, err := r.DB.GetUserById(obj.UserID)
+	user, err := r.DB.GetUserByID(obj.UserID)
 	if err != nil {
 		return nil, err
 	}

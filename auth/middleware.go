@@ -50,7 +50,7 @@ func AuthMiddleware(db wellinformed.Persistor) func(http.Handler) http.Handler {
 				return
 			}
 
-			user, err := db.GetUserById(id)
+			user, err := db.GetUserByID(id)
 			if err != nil || user == nil {
 				next.ServeHTTP(w, r)
 				return
@@ -161,7 +161,7 @@ func RefreshToken(db wellinformed.Persistor) http.HandlerFunc {
 			w.Write(errJsonRes)
 			return
 		}
-		user, err := db.GetUserById(id)
+		user, err := db.GetUserByID(id)
 
 		log.Printf("user: %v", user)
 
