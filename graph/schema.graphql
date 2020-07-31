@@ -66,6 +66,7 @@ type User {
   srcRSSFeeds: [SrcRSSFeed!]!
   preferenceSets: [PreferenceSet!]!
   activePreferenceSet: PreferenceSet!
+  history: [History!]
   createdAt: Time!
   updatedAt: Time!
   subscriptions: [UserSubscription!]
@@ -96,6 +97,27 @@ input PreferenceSetInput {
 enum sortType {
   chronological
   sourceName
+}
+
+type History {
+  id: ID!
+  user: User!
+  contentItem: ContentItem!
+  readState: ReadState!
+  percentRead: Int
+}
+
+enum ReadState {
+  completed
+  savedForLater
+  partiallyRead
+  unread
+}
+
+input HistoryInput {
+  contentItemID: ID!
+  readState: ReadState!
+  percentRead: Int
 }
 
 input SrcRSSFeedInput {
@@ -131,6 +153,7 @@ type Query {
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
+  getHistoryByContentID(input: ID!): History!
   preferenceSets: [PreferenceSet!]!
 }
 
@@ -143,5 +166,6 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
+  saveHistory(input: HistoryInput): History!
   savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }

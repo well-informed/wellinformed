@@ -29,6 +29,12 @@ type GetUserInput struct {
 	Username *string `json:"username"`
 }
 
+type HistoryInput struct {
+	ContentItemID int64     `json:"contentItemID"`
+	ReadState     ReadState `json:"readState"`
+	PercentRead   *int      `json:"percentRead"`
+}
+
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -63,6 +69,51 @@ type UserFeed struct {
 	UserID       int64          `json:"userID"`
 	Name         string         `json:"name"`
 	ContentItems []*ContentItem `json:"contentItems"`
+}
+
+type ReadState string
+
+const (
+	ReadStateCompleted     ReadState = "completed"
+	ReadStateSavedForLater ReadState = "savedForLater"
+	ReadStatePartiallyRead ReadState = "partiallyRead"
+	ReadStateUnread        ReadState = "unread"
+)
+
+var AllReadState = []ReadState{
+	ReadStateCompleted,
+	ReadStateSavedForLater,
+	ReadStatePartiallyRead,
+	ReadStateUnread,
+}
+
+func (e ReadState) IsValid() bool {
+	switch e {
+	case ReadStateCompleted, ReadStateSavedForLater, ReadStatePartiallyRead, ReadStateUnread:
+		return true
+	}
+	return false
+}
+
+func (e ReadState) String() string {
+	return string(e)
+}
+
+func (e *ReadState) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ReadState(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ReadState", str)
+	}
+	return nil
+}
+
+func (e ReadState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type SortType string

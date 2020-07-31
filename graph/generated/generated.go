@@ -36,6 +36,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	History() HistoryResolver
 	Mutation() MutationResolver
 	PreferenceSet() PreferenceSetResolver
 	Query() QueryResolver
@@ -80,11 +81,20 @@ type ComplexityRoot struct {
 		Ok func(childComplexity int) int
 	}
 
+	History struct {
+		ContentItem func(childComplexity int) int
+		ID          func(childComplexity int) int
+		PercentRead func(childComplexity int) int
+		ReadState   func(childComplexity int) int
+		User        func(childComplexity int) int
+	}
+
 	Mutation struct {
 		AddSrcRSSFeed      func(childComplexity int, feedLink string) int
 		DeleteSubscription func(childComplexity int, srcRssfeedID int64) int
 		Login              func(childComplexity int, input model.LoginInput) int
 		Register           func(childComplexity int, input model.RegisterInput) int
+		SaveHistory        func(childComplexity int, input *model.HistoryInput) int
 		SavePreferenceSet  func(childComplexity int, input model.PreferenceSetInput) int
 	}
 
@@ -99,13 +109,14 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetContentItem func(childComplexity int, input int64) int
-		Me             func(childComplexity int) int
-		PreferenceSets func(childComplexity int) int
-		Sources        func(childComplexity int) int
-		SrcRSSFeed     func(childComplexity int, input *model.SrcRSSFeedInput) int
-		User           func(childComplexity int, input *model.GetUserInput) int
-		UserFeed       func(childComplexity int) int
+		GetContentItem        func(childComplexity int, input int64) int
+		GetHistoryByContentID func(childComplexity int, input int64) int
+		Me                    func(childComplexity int) int
+		PreferenceSets        func(childComplexity int) int
+		Sources               func(childComplexity int) int
+		SrcRSSFeed            func(childComplexity int, input *model.SrcRSSFeedInput) int
+		User                  func(childComplexity int, input *model.GetUserInput) int
+		UserFeed              func(childComplexity int) int
 	}
 
 	SrcRSSFeed struct {
@@ -128,6 +139,7 @@ type ComplexityRoot struct {
 		Email               func(childComplexity int) int
 		Feed                func(childComplexity int) int
 		Firstname           func(childComplexity int) int
+		History             func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		Lastname            func(childComplexity int) int
 		Password            func(childComplexity int) int
@@ -152,11 +164,16 @@ type ComplexityRoot struct {
 	}
 }
 
+type HistoryResolver interface {
+	User(ctx context.Context, obj *model.History) (*model.User, error)
+	ContentItem(ctx context.Context, obj *model.History) (*model.ContentItem, error)
+}
 type MutationResolver interface {
 	AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
 	DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
+	SaveHistory(ctx context.Context, input *model.HistoryInput) (*model.History, error)
 	SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error)
 }
 type PreferenceSetResolver interface {
@@ -171,6 +188,7 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	User(ctx context.Context, input *model.GetUserInput) (*model.User, error)
 	GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error)
+	GetHistoryByContentID(ctx context.Context, input int64) (*model.History, error)
 	PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error)
 }
 type SrcRSSFeedResolver interface {
@@ -182,6 +200,7 @@ type UserResolver interface {
 	SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error)
 	PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error)
 	ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error)
+	History(ctx context.Context, obj *model.User) ([]*model.History, error)
 
 	Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error)
 }
@@ -345,6 +364,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.DeleteResponse.Ok(childComplexity), true
 
+	case "History.contentItem":
+		if e.complexity.History.ContentItem == nil {
+			break
+		}
+
+		return e.complexity.History.ContentItem(childComplexity), true
+
+	case "History.id":
+		if e.complexity.History.ID == nil {
+			break
+		}
+
+		return e.complexity.History.ID(childComplexity), true
+
+	case "History.percentRead":
+		if e.complexity.History.PercentRead == nil {
+			break
+		}
+
+		return e.complexity.History.PercentRead(childComplexity), true
+
+	case "History.readState":
+		if e.complexity.History.ReadState == nil {
+			break
+		}
+
+		return e.complexity.History.ReadState(childComplexity), true
+
+	case "History.user":
+		if e.complexity.History.User == nil {
+			break
+		}
+
+		return e.complexity.History.User(childComplexity), true
+
 	case "Mutation.addSrcRSSFeed":
 		if e.complexity.Mutation.AddSrcRSSFeed == nil {
 			break
@@ -392,6 +446,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Register(childComplexity, args["input"].(model.RegisterInput)), true
+
+	case "Mutation.saveHistory":
+		if e.complexity.Mutation.SaveHistory == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_saveHistory_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SaveHistory(childComplexity, args["input"].(*model.HistoryInput)), true
 
 	case "Mutation.savePreferenceSet":
 		if e.complexity.Mutation.SavePreferenceSet == nil {
@@ -465,6 +531,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetContentItem(childComplexity, args["input"].(int64)), true
+
+	case "Query.getHistoryByContentID":
+		if e.complexity.Query.GetHistoryByContentID == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getHistoryByContentID_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetHistoryByContentID(childComplexity, args["input"].(int64)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -629,6 +707,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Firstname(childComplexity), true
+
+	case "User.history":
+		if e.complexity.User.History == nil {
+			break
+		}
+
+		return e.complexity.User.History(childComplexity), true
 
 	case "User.id":
 		if e.complexity.User.ID == nil {
@@ -867,6 +952,7 @@ type User {
   srcRSSFeeds: [SrcRSSFeed!]!
   preferenceSets: [PreferenceSet!]!
   activePreferenceSet: PreferenceSet!
+  history: [History!]
   createdAt: Time!
   updatedAt: Time!
   subscriptions: [UserSubscription!]
@@ -897,6 +983,27 @@ input PreferenceSetInput {
 enum sortType {
   chronological
   sourceName
+}
+
+type History {
+  id: ID!
+  user: User!
+  contentItem: ContentItem!
+  readState: ReadState!
+  percentRead: Int
+}
+
+enum ReadState {
+  completed
+  savedForLater
+  partiallyRead
+  unread
+}
+
+input HistoryInput {
+  contentItemID: ID!
+  readState: ReadState!
+  percentRead: Int
 }
 
 input SrcRSSFeedInput {
@@ -932,6 +1039,7 @@ type Query {
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
+  getHistoryByContentID(input: ID!): History!
   preferenceSets: [PreferenceSet!]!
 }
 
@@ -944,6 +1052,7 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
+  saveHistory(input: HistoryInput): History!
   savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }
 `, BuiltIn: false},
@@ -1010,6 +1119,20 @@ func (ec *executionContext) field_Mutation_register_args(ctx context.Context, ra
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_saveHistory_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.HistoryInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOHistoryInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistoryInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_savePreferenceSet_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1039,6 +1162,20 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 }
 
 func (ec *executionContext) field_Query_getContentItem_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int64
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getHistoryByContentID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int64
@@ -1778,6 +1915,173 @@ func (ec *executionContext) _DeleteResponse_ok(ctx context.Context, field graphq
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _History_id(ctx context.Context, field graphql.CollectedField, obj *model.History) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "History",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNID2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _History_user(ctx context.Context, field graphql.CollectedField, obj *model.History) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "History",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.History().User(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _History_contentItem(ctx context.Context, field graphql.CollectedField, obj *model.History) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "History",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.History().ContentItem(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ContentItem)
+	fc.Result = res
+	return ec.marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _History_readState(ctx context.Context, field graphql.CollectedField, obj *model.History) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "History",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ReadState, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(model.ReadState)
+	fc.Result = res
+	return ec.marshalNReadState2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐReadState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _History_percentRead(ctx context.Context, field graphql.CollectedField, obj *model.History) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "History",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PercentRead, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_addSrcRSSFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1940,6 +2244,47 @@ func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.C
 	res := resTmp.(*model.AuthResponse)
 	fc.Result = res
 	return ec.marshalNAuthResponse2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAuthResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_saveHistory(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_saveHistory_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SaveHistory(rctx, args["input"].(*model.HistoryInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.History)
+	fc.Result = res
+	return ec.marshalNHistory2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistory(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_savePreferenceSet(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2438,6 +2783,47 @@ func (ec *executionContext) _Query_getContentItem(ctx context.Context, field gra
 	res := resTmp.(*model.ContentItem)
 	fc.Result = res
 	return ec.marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_getHistoryByContentID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_getHistoryByContentID_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetHistoryByContentID(rctx, args["input"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.History)
+	fc.Result = res
+	return ec.marshalNHistory2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistory(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_preferenceSets(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3246,6 +3632,37 @@ func (ec *executionContext) _User_activePreferenceSet(ctx context.Context, field
 	res := resTmp.(*model.PreferenceSet)
 	fc.Result = res
 	return ec.marshalNPreferenceSet2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSet(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_history(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().History(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.History)
+	fc.Result = res
+	return ec.marshalOHistory2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistoryᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -4670,6 +5087,36 @@ func (ec *executionContext) unmarshalInputGetUserInput(ctx context.Context, obj 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputHistoryInput(ctx context.Context, obj interface{}) (model.HistoryInput, error) {
+	var it model.HistoryInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "contentItemID":
+			var err error
+			it.ContentItemID, err = ec.unmarshalNID2int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "readState":
+			var err error
+			it.ReadState, err = ec.unmarshalNReadState2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐReadState(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "percentRead":
+			var err error
+			it.PercentRead, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj interface{}) (model.LoginInput, error) {
 	var it model.LoginInput
 	var asMap = obj.(map[string]interface{})
@@ -4992,6 +5439,68 @@ func (ec *executionContext) _DeleteResponse(ctx context.Context, sel ast.Selecti
 	return out
 }
 
+var historyImplementors = []string{"History"}
+
+func (ec *executionContext) _History(ctx context.Context, sel ast.SelectionSet, obj *model.History) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, historyImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("History")
+		case "id":
+			out.Values[i] = ec._History_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "user":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._History_user(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "contentItem":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._History_contentItem(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "readState":
+			out.Values[i] = ec._History_readState(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "percentRead":
+			out.Values[i] = ec._History_percentRead(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -5024,6 +5533,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "login":
 			out.Values[i] = ec._Mutation_login(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "saveHistory":
+			out.Values[i] = ec._Mutation_saveHistory(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -5206,6 +5720,20 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getContentItem(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "getHistoryByContentID":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getHistoryByContentID(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -5421,6 +5949,17 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
+				return res
+			})
+		case "history":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_history(ctx, field, obj)
 				return res
 			})
 		case "createdAt":
@@ -5904,6 +6443,20 @@ func (ec *executionContext) marshalNDeleteResponse2ᚖgithubᚗcomᚋwellᚑinfo
 	return ec._DeleteResponse(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNHistory2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistory(ctx context.Context, sel ast.SelectionSet, v model.History) graphql.Marshaler {
+	return ec._History(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNHistory2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistory(ctx context.Context, sel ast.SelectionSet, v *model.History) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._History(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNID2int64(ctx context.Context, v interface{}) (int64, error) {
 	return graphql.UnmarshalInt64(v)
 }
@@ -5975,6 +6528,15 @@ func (ec *executionContext) marshalNPreferenceSet2ᚖgithubᚗcomᚋwellᚑinfor
 
 func (ec *executionContext) unmarshalNPreferenceSetInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSetInput(ctx context.Context, v interface{}) (model.PreferenceSetInput, error) {
 	return ec.unmarshalInputPreferenceSetInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNReadState2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐReadState(ctx context.Context, v interface{}) (model.ReadState, error) {
+	var res model.ReadState
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNReadState2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐReadState(ctx context.Context, sel ast.SelectionSet, v model.ReadState) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNRegisterInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐRegisterInput(ctx context.Context, v interface{}) (model.RegisterInput, error) {
@@ -6372,6 +6934,58 @@ func (ec *executionContext) unmarshalOGetUserInput2ᚖgithubᚗcomᚋwellᚑinfo
 	return &res, err
 }
 
+func (ec *executionContext) marshalOHistory2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistoryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.History) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNHistory2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistory(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) unmarshalOHistoryInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistoryInput(ctx context.Context, v interface{}) (model.HistoryInput, error) {
+	return ec.unmarshalInputHistoryInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOHistoryInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistoryInput(ctx context.Context, v interface{}) (*model.HistoryInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOHistoryInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistoryInput(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOID2int64(ctx context.Context, v interface{}) (int64, error) {
 	return graphql.UnmarshalInt64(v)
 }
@@ -6393,6 +7007,29 @@ func (ec *executionContext) marshalOID2ᚖint64(ctx context.Context, sel ast.Sel
 		return graphql.Null
 	}
 	return ec.marshalOID2int64(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOInt2int(ctx context.Context, v interface{}) (int, error) {
+	return graphql.UnmarshalInt(v)
+}
+
+func (ec *executionContext) marshalOInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	return graphql.MarshalInt(v)
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOInt2int(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec.marshalOInt2int(ctx, sel, *v)
 }
 
 func (ec *executionContext) unmarshalOSrcRSSFeedInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedInput(ctx context.Context, v interface{}) (model.SrcRSSFeedInput, error) {

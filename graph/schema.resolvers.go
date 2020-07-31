@@ -14,6 +14,18 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
+func (r *historyResolver) User(ctx context.Context, obj *model.History) (*model.User, error) {
+	user, err := r.DB.GetUserByID(obj.UserID)
+	if user == nil {
+		return nil, errors.New("user does not exist in history entry")
+	}
+	return user, err
+}
+
+func (r *historyResolver) ContentItem(ctx context.Context, obj *model.History) (*model.ContentItem, error) {
+	return r.DB.GetContentItem(obj.ContentItemID)
+}
+
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
@@ -81,12 +93,20 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	return r.UserService.Login(ctx, input)
 }
 
+func (r *mutationResolver) SaveHistory(ctx context.Context, input *model.HistoryInput) (*model.History, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.DB.SaveHistory(user.ID, input)
+}
+
 func (r *mutationResolver) SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
 	return r.UserService.SavePreferenceSet(ctx, &input)
 }
 
 func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
-	return r.DB.GetUserById(obj.UserID)
+	return r.DB.GetUserByID(obj.UserID)
 }
 
 func (r *preferenceSetResolver) Active(ctx context.Context, obj *model.PreferenceSet) (bool, error) {
@@ -151,7 +171,7 @@ func (r *queryResolver) User(ctx context.Context, input *model.GetUserInput) (*m
 	var err error
 
 	if input.UserID != nil {
-		user, err = r.DB.GetUserById(*input.UserID)
+		user, err = r.DB.GetUserByID(*input.UserID)
 	} else if input.Email != nil {
 		user, err = r.DB.GetUserByEmail(*input.Email)
 	} else if input.Username != nil {
@@ -179,6 +199,20 @@ func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model
 		return nil, err
 	}
 	return contentItem, nil
+}
+
+func (r *queryResolver) GetHistoryByContentID(ctx context.Context, input int64) (*model.History, error) {
+	log.Debug("resolving GetHistoryByContentID")
+	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user history: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+	history, err := r.DB.GetHistoryByContentID(currentUser.ID, input)
+	if err != nil {
+		return nil, err
+	}
+	return history, nil
 }
 
 func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
@@ -229,6 +263,10 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSetName)
 }
 
+func (r *userResolver) History(ctx context.Context, obj *model.User) ([]*model.History, error) {
+	return r.DB.ListUserHistory(obj.ID)
+}
+
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
@@ -238,7 +276,7 @@ func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*m
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
-	user, err := r.DB.GetUserById(obj.UserID)
+	user, err := r.DB.GetUserByID(obj.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -256,6 +294,9 @@ func (r *userSubscriptionResolver) SrcRSSFeed(ctx context.Context, obj *model.Us
 	}
 	return src, nil
 }
+
+// History returns generated.HistoryResolver implementation.
+func (r *Resolver) History() generated.HistoryResolver { return &historyResolver{r} }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
@@ -277,6 +318,7 @@ func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 	return &userSubscriptionResolver{r}
 }
 
+type historyResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
