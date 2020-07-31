@@ -62,8 +62,8 @@ type ContentItem struct {
 
 type History struct {
 	ID            int64     `json:"id"`
-	UserID        int64     `json:"user"`
-	ContentItemID int64     `json:"contentItem"`
-	ReadState     ReadState `json:"readState"`
-	PercentRead   *int      `json:"percentRead"`
+	UserID        int64     `json:"user" db:"user_id"`
+	ContentItemID int64     `json:"contentItem" db:"content_item_id"`
+	ReadState     ReadState `json:"readState" db:"read_state"`
+	PercentRead   *int      `json:"percentRead" db:"percent_read"`
 }

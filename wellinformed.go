@@ -29,7 +29,7 @@ type Persistor interface {
 	ListPreferenceSetsByUser(userID int64) ([]*model.PreferenceSet, error)
 	GetPreferenceSetByID(id int64) (*model.PreferenceSet, error)
 	GetPreferenceSetByName(userID int64, name string) (*model.PreferenceSet, error)
-	SaveHistory(userID int64, *model.HistoryInput) (*model.History, error)
+	SaveHistory(userID int64, hstory *model.HistoryInput) (*model.History, error)
 	ListUserHistory(userID int64) ([]*model.History, error)
 	GetHistoryByContentID(userID int64, contentItemID int64) (*model.History, error)
 }
