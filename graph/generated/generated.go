@@ -36,6 +36,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	ContentItem() ContentItemResolver
 	History() HistoryResolver
 	Mutation() MutationResolver
 	PreferenceSet() PreferenceSetResolver
@@ -64,6 +65,7 @@ type ComplexityRoot struct {
 		Content     func(childComplexity int) int
 		Description func(childComplexity int) int
 		GUID        func(childComplexity int) int
+		History     func(childComplexity int) int
 		ID          func(childComplexity int) int
 		ImageTitle  func(childComplexity int) int
 		ImageURL    func(childComplexity int) int
@@ -109,14 +111,13 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetContentItem        func(childComplexity int, input int64) int
-		GetHistoryByContentID func(childComplexity int, input int64) int
-		Me                    func(childComplexity int) int
-		PreferenceSets        func(childComplexity int) int
-		Sources               func(childComplexity int) int
-		SrcRSSFeed            func(childComplexity int, input *model.SrcRSSFeedInput) int
-		User                  func(childComplexity int, input *model.GetUserInput) int
-		UserFeed              func(childComplexity int) int
+		GetContentItem func(childComplexity int, input int64) int
+		Me             func(childComplexity int) int
+		PreferenceSets func(childComplexity int) int
+		Sources        func(childComplexity int) int
+		SrcRSSFeed     func(childComplexity int, input *model.SrcRSSFeedInput) int
+		User           func(childComplexity int, input *model.GetUserInput) int
+		UserFeed       func(childComplexity int) int
 	}
 
 	SrcRSSFeed struct {
@@ -164,6 +165,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type ContentItemResolver interface {
+	History(ctx context.Context, obj *model.ContentItem) (*model.History, error)
+}
 type HistoryResolver interface {
 	User(ctx context.Context, obj *model.History) (*model.User, error)
 	ContentItem(ctx context.Context, obj *model.History) (*model.ContentItem, error)
@@ -188,7 +192,6 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	User(ctx context.Context, input *model.GetUserInput) (*model.User, error)
 	GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error)
-	GetHistoryByContentID(ctx context.Context, input int64) (*model.History, error)
 	PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error)
 }
 type SrcRSSFeedResolver interface {
@@ -279,6 +282,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ContentItem.GUID(childComplexity), true
+
+	case "ContentItem.history":
+		if e.complexity.ContentItem.History == nil {
+			break
+		}
+
+		return e.complexity.ContentItem.History(childComplexity), true
 
 	case "ContentItem.id":
 		if e.complexity.ContentItem.ID == nil {
@@ -531,18 +541,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetContentItem(childComplexity, args["input"].(int64)), true
-
-	case "Query.getHistoryByContentID":
-		if e.complexity.Query.GetHistoryByContentID == nil {
-			break
-		}
-
-		args, err := ec.field_Query_getHistoryByContentID_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.GetHistoryByContentID(childComplexity, args["input"].(int64)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -926,6 +924,7 @@ type ContentItem {
   imageTitle: String
   imageURL: String
   sourceType: String!
+  history: History!
 }
 
 type UserSubscription {
@@ -1039,7 +1038,6 @@ type Query {
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
-  getHistoryByContentID(input: ID!): History!
   preferenceSets: [PreferenceSet!]!
 }
 
@@ -1162,20 +1160,6 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 }
 
 func (ec *executionContext) field_Query_getContentItem_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int64
-	if tmp, ok := rawArgs["input"]; ok {
-		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_getHistoryByContentID_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 int64
@@ -1879,6 +1863,40 @@ func (ec *executionContext) _ContentItem_sourceType(ctx context.Context, field g
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItem_history(ctx context.Context, field graphql.CollectedField, obj *model.ContentItem) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItem",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.ContentItem().History(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.History)
+	fc.Result = res
+	return ec.marshalNHistory2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistory(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _DeleteResponse_ok(ctx context.Context, field graphql.CollectedField, obj *model.DeleteResponse) (ret graphql.Marshaler) {
@@ -2783,47 +2801,6 @@ func (ec *executionContext) _Query_getContentItem(ctx context.Context, field gra
 	res := resTmp.(*model.ContentItem)
 	fc.Result = res
 	return ec.marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItem(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Query_getHistoryByContentID(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Query",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_getHistoryByContentID_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetHistoryByContentID(rctx, args["input"].(int64))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.History)
-	fc.Result = res
-	return ec.marshalNHistory2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐHistory(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_preferenceSets(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5347,42 +5324,42 @@ func (ec *executionContext) _ContentItem(ctx context.Context, sel ast.SelectionS
 		case "id":
 			out.Values[i] = ec._ContentItem_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "sourceID":
 			out.Values[i] = ec._ContentItem_sourceID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "sourceTitle":
 			out.Values[i] = ec._ContentItem_sourceTitle(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "sourceLink":
 			out.Values[i] = ec._ContentItem_sourceLink(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._ContentItem_title(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "description":
 			out.Values[i] = ec._ContentItem_description(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "content":
 			out.Values[i] = ec._ContentItem_content(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "link":
 			out.Values[i] = ec._ContentItem_link(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "updated":
 			out.Values[i] = ec._ContentItem_updated(ctx, field, obj)
@@ -5399,8 +5376,22 @@ func (ec *executionContext) _ContentItem(ctx context.Context, sel ast.SelectionS
 		case "sourceType":
 			out.Values[i] = ec._ContentItem_sourceType(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "history":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._ContentItem_history(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5720,20 +5711,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getContentItem(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
-		case "getHistoryByContentID":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_getHistoryByContentID(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}

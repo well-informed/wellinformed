@@ -40,6 +40,7 @@ type ContentItem {
   imageTitle: String
   imageURL: String
   sourceType: String!
+  history: History!
 }
 
 type UserSubscription {
@@ -153,7 +154,6 @@ type Query {
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
-  getHistoryByContentID(input: ID!): History!
   preferenceSets: [PreferenceSet!]!
 }
 

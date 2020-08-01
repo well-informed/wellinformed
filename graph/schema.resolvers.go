@@ -14,6 +14,27 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
+func (r *contentItemResolver) History(ctx context.Context, obj *model.ContentItem) (*model.History, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user does not exist")
+	}
+
+	history, err := r.DB.GetHistoryByContentID(user.ID, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if history == nil {
+		return &model.History{}, nil
+	}
+
+	return history, nil
+}
+
 func (r *historyResolver) User(ctx context.Context, obj *model.History) (*model.User, error) {
 	user, err := r.DB.GetUserByID(obj.UserID)
 	if user == nil {
@@ -201,20 +222,6 @@ func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model
 	return contentItem, nil
 }
 
-func (r *queryResolver) GetHistoryByContentID(ctx context.Context, input int64) (*model.History, error) {
-	log.Debug("resolving GetHistoryByContentID")
-	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		log.Printf("error while getting user history: %v", err)
-		return nil, errors.New("You are not signed in!")
-	}
-	history, err := r.DB.GetHistoryByContentID(currentUser.ID, input)
-	if err != nil {
-		return nil, err
-	}
-	return history, nil
-}
-
 func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
@@ -295,6 +302,9 @@ func (r *userSubscriptionResolver) SrcRSSFeed(ctx context.Context, obj *model.Us
 	return src, nil
 }
 
+// ContentItem returns generated.ContentItemResolver implementation.
+func (r *Resolver) ContentItem() generated.ContentItemResolver { return &contentItemResolver{r} }
+
 // History returns generated.HistoryResolver implementation.
 func (r *Resolver) History() generated.HistoryResolver { return &historyResolver{r} }
 
@@ -318,6 +328,7 @@ func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 	return &userSubscriptionResolver{r}
 }
 
+type contentItemResolver struct{ *Resolver }
 type historyResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type preferenceSetResolver struct{ *Resolver }
@@ -325,3 +336,23 @@ type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
 type userSubscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *queryResolver) GetHistoryByContentID(ctx context.Context, input int64) (*model.History, error) {
+	log.Debug("resolving GetHistoryByContentID")
+	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user history: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+	history, err := r.DB.GetHistoryByContentID(currentUser.ID, input)
+	if err != nil {
+		return nil, err
+	}
+	return history, nil
+}
