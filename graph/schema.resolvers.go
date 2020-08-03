@@ -271,7 +271,45 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 }
 
 func (r *userResolver) History(ctx context.Context, obj *model.User) ([]*model.History, error) {
-	return r.DB.ListUserHistory(obj.ID)
+	// There are two cases to consider here:
+	// 	1. The user in context is requesting thier own history
+	// 	2. The user in context is requesting another user's history
+	// Handling case 1 is trivial. Handling case 2 requires strategic merging of
+	// history records from both users.
+
+	currUser, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if currUser.ID == obj.ID {
+		return r.DB.ListUserHistory(obj.ID)
+	}
+
+	mergedHistory := make([]*model.History, 0)
+	otherUserHistories, err := r.DB.ListUserHistory(obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	for _, otherHist := range otherUserHistories {
+		currHist, err := r.DB.GetHistoryByContentID(currUser.ID, otherHist.ContentItemID)
+		if err != nil {
+			return nil, err
+		}
+		if currHist == nil {
+			mergedHistory = append(mergedHistory,
+				&model.History{
+					UserID:        currUser.ID,
+					ContentItemID: otherHist.ContentItemID,
+					ReadState:     "unread",
+				},
+			)
+		} else {
+			mergedHistory = append(mergedHistory, currHist)
+		}
+	}
+
+	return mergedHistory, nil
 }
 
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
