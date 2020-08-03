@@ -15,15 +15,20 @@ func (db DB) SaveHistory(userID int64, input *model.HistoryInput) (*model.Histor
 		percent_read
 	)
 	VALUES($1, $2, $3, $4)
-	RETURNING id
-	ON CONFLICT DO UPDATE SET
+	ON CONFLICT (user_id, content_item_id)
+	DO UPDATE SET
 	user_id = $1,
 	content_item_id = $2,
 	read_state = $3,
 	percent_read = $4
 	RETURNING id`
 	var ID int64
-	err := db.QueryRowx(stmt, userID, input).Scan(&ID)
+	err := db.QueryRowx(stmt,
+		userID,
+		input.ContentItemID,
+		input.ReadState,
+		input.PercentRead,
+	).Scan(&ID)
 	if err != nil {
 		log.Error("failed to save history entry: err: ", err)
 		return nil, err
@@ -45,7 +50,7 @@ func (db DB) GetHistoryByContentID(userID int64, contentItemID int64) (*model.Hi
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("failed to select History by user_id and content_item_id. err: ", err)
+		log.Error("failed to select history by user_id and content_item_id. err: ", err)
 		return nil, err
 	}
 	return &itemHistory, nil
@@ -57,11 +62,10 @@ func (db DB) ListUserHistory(userID int64) ([]*model.History, error) {
 
 func (db DB) listUserHistoryByQuery(stmt string, args ...interface{}) ([]*model.History, error) {
 	histories := make([]*model.History, 0)
-	err := db.Select(&histories, stmt, args)
+	err := db.Select(&histories, stmt, args...)
 	if err != nil {
 		log.Error("error selecting all Histories. err: ", err)
 		return nil, err
 	}
 	return histories, nil
 }
-
