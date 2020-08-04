@@ -19,6 +19,10 @@ type AuthToken struct {
 	ExpiredAt   time.Time `json:"expiredAt"`
 }
 
+type ContentItemInteractionsInput struct {
+	UserID *int64 `json:"userID"`
+}
+
 type DeleteResponse struct {
 	Ok bool `json:"ok"`
 }
@@ -29,7 +33,7 @@ type GetUserInput struct {
 	Username *string `json:"username"`
 }
 
-type HistoryInput struct {
+type InteractionInput struct {
 	ContentItemID int64     `json:"contentItemID"`
 	ReadState     ReadState `json:"readState"`
 	PercentRead   *int      `json:"percentRead"`
@@ -69,6 +73,10 @@ type UserFeed struct {
 	UserID       int64          `json:"userID"`
 	Name         string         `json:"name"`
 	ContentItems []*ContentItem `json:"contentItems"`
+}
+
+type UserInteractionsInput struct {
+	ReadState *ReadState `json:"readState"`
 }
 
 type ReadState string

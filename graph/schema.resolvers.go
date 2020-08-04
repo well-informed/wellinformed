@@ -6,7 +6,9 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
@@ -14,16 +16,41 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
-func (r *historyResolver) User(ctx context.Context, obj *model.History) (*model.User, error) {
-	user, err := r.DB.GetUserByID(obj.UserID)
-	if user == nil {
-		return nil, errors.New("user does not exist in history entry")
+func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.ContentItem, input *model.ContentItemInteractionsInput) (*model.Interaction, error) {
+	var userIdToUse int64
+
+	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return user, err
+
+	if input != nil {
+		if input.UserID == nil {
+			userIdToUse = currentUser.ID
+		} else {
+			userIdToUse = *input.UserID
+		}
+	} else {
+		userIdToUse = currentUser.ID
+	}
+
+	return r.DB.GetInteractionByContentID(userIdToUse, obj.ID)
 }
 
-func (r *historyResolver) ContentItem(ctx context.Context, obj *model.History) (*model.ContentItem, error) {
-	return r.DB.GetContentItem(obj.ContentItemID)
+func (r *interactionResolver) User(ctx context.Context, obj *model.Interaction) (*model.User, error) {
+	_, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.DB.GetUserByInteraction(obj.ID)
+}
+
+func (r *interactionResolver) ContentItem(ctx context.Context, obj *model.Interaction) (*model.ContentItem, error) {
+	_, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.DB.GetContentItemByInteraction(obj.ID)
 }
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
@@ -93,12 +120,12 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	return r.UserService.Login(ctx, input)
 }
 
-func (r *mutationResolver) SaveHistory(ctx context.Context, input *model.HistoryInput) (*model.History, error) {
+func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.InteractionInput) (*model.Interaction, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.DB.SaveHistory(user.ID, input)
+	return r.DB.SaveInteraction(user.ID, input)
 }
 
 func (r *mutationResolver) SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
@@ -201,18 +228,13 @@ func (r *queryResolver) GetContentItem(ctx context.Context, input int64) (*model
 	return contentItem, nil
 }
 
-func (r *queryResolver) GetHistoryByContentID(ctx context.Context, input int64) (*model.History, error) {
-	log.Debug("resolving GetHistoryByContentID")
+func (r *queryResolver) GetInteractionByContentID(ctx context.Context, input int64) (*model.Interaction, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		log.Printf("error while getting user history: %v", err)
-		return nil, errors.New("You are not signed in!")
-	}
-	history, err := r.DB.GetHistoryByContentID(currentUser.ID, input)
 	if err != nil {
 		return nil, err
 	}
-	return history, nil
+
+	return r.DB.GetInteractionByContentID(currentUser.ID, input)
 }
 
 func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
@@ -263,16 +285,29 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSetName)
 }
 
-func (r *userResolver) History(ctx context.Context, obj *model.User) ([]*model.History, error) {
-	return r.DB.ListUserHistory(obj.ID)
-}
-
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return r.DB.ListUserSubscriptions(user.ID)
+}
+
+func (r *userResolver) Interactions(ctx context.Context, obj *model.User, input *model.UserInteractionsInput) ([]*model.Interaction, error) {
+	var interactionInput *model.ReadState
+	_, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		log.Printf("error while getting user feed: %v", err)
+		return nil, errors.New("You are not signed in!")
+	}
+
+	if input == nil {
+		interactionInput = nil
+	} else {
+		interactionInput = input.ReadState
+	}
+
+	return r.DB.ListUserInteractions(obj.ID, interactionInput)
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
@@ -295,8 +330,11 @@ func (r *userSubscriptionResolver) SrcRSSFeed(ctx context.Context, obj *model.Us
 	return src, nil
 }
 
-// History returns generated.HistoryResolver implementation.
-func (r *Resolver) History() generated.HistoryResolver { return &historyResolver{r} }
+// ContentItem returns generated.ContentItemResolver implementation.
+func (r *Resolver) ContentItem() generated.ContentItemResolver { return &contentItemResolver{r} }
+
+// Interaction returns generated.InteractionResolver implementation.
+func (r *Resolver) Interaction() generated.InteractionResolver { return &interactionResolver{r} }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
@@ -318,10 +356,24 @@ func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 	return &userSubscriptionResolver{r}
 }
 
-type historyResolver struct{ *Resolver }
+type contentItemResolver struct{ *Resolver }
+type interactionResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
 type userSubscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *interactionResolver) CreatedAt(ctx context.Context, obj *model.Interaction) (*time.Time, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+func (r *interactionResolver) UpdatedAt(ctx context.Context, obj *model.Interaction) (*time.Time, error) {
+	panic(fmt.Errorf("not implemented"))
+}

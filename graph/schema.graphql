@@ -24,6 +24,10 @@ type SrcRSSFeed {
   isSubscribed: Boolean!
 }
 
+input ContentItemInteractionsInput {
+  userID: ID
+}
+
 type ContentItem {
   id: ID!
   sourceID: ID!
@@ -40,6 +44,7 @@ type ContentItem {
   imageTitle: String
   imageURL: String
   sourceType: String!
+  interaction(input: ContentItemInteractionsInput): Interaction
 }
 
 type UserSubscription {
@@ -55,6 +60,10 @@ type UserFeed {
   contentItems: [ContentItem!]!
 }
 
+input UserInteractionsInput {
+  readState: ReadState
+}
+
 type User {
   id: ID!
   firstname: String!
@@ -66,10 +75,10 @@ type User {
   srcRSSFeeds: [SrcRSSFeed!]!
   preferenceSets: [PreferenceSet!]!
   activePreferenceSet: PreferenceSet!
-  history: [History!]
   createdAt: Time!
   updatedAt: Time!
   subscriptions: [UserSubscription!]
+  interactions(input: UserInteractionsInput): [Interaction]
 }
 
 type PreferenceSet {
@@ -99,12 +108,14 @@ enum sortType {
   sourceName
 }
 
-type History {
+type Interaction {
   id: ID!
   user: User!
   contentItem: ContentItem!
   readState: ReadState!
   percentRead: Int
+  createdAt: Time!
+  updatedAt: Time!
 }
 
 enum ReadState {
@@ -114,7 +125,7 @@ enum ReadState {
   unread
 }
 
-input HistoryInput {
+input InteractionInput {
   contentItemID: ID!
   readState: ReadState!
   percentRead: Int
@@ -153,7 +164,7 @@ type Query {
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
-  getHistoryByContentID(input: ID!): History!
+  getInteractionByContentID(input: ID!): Interaction!
   preferenceSets: [PreferenceSet!]!
 }
 
@@ -166,6 +177,6 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
-  saveHistory(input: HistoryInput): History!
+  saveInteraction(input: InteractionInput): Interaction!
   savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }
