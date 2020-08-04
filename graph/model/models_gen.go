@@ -36,7 +36,7 @@ type GetUserInput struct {
 type InteractionInput struct {
 	ContentItemID int64     `json:"contentItemID"`
 	ReadState     ReadState `json:"readState"`
-	PercentRead   *int      `json:"percentRead"`
+	PercentRead   *float64  `json:"percentRead"`
 }
 
 type LoginInput struct {

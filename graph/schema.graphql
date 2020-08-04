@@ -113,7 +113,7 @@ type Interaction {
   user: User!
   contentItem: ContentItem!
   readState: ReadState!
-  percentRead: Int
+  percentRead: Float!
   createdAt: Time!
   updatedAt: Time!
 }
@@ -128,7 +128,7 @@ enum ReadState {
 input InteractionInput {
   contentItemID: ID!
   readState: ReadState!
-  percentRead: Int
+  percentRead: Float
 }
 
 input SrcRSSFeedInput {
