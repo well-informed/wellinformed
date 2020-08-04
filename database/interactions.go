@@ -25,8 +25,10 @@ func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*mode
 	read_state = $3,
 	percent_read = $4,
 	updated_at = $6
-	RETURNING id`
+	RETURNING id, created_at, updated_at`
 	var ID int64
+	var CreatedAt time.Time
+	var UpdatedAt time.Time
 	err := db.QueryRowx(stmt,
 		userID,
 		input.ContentItemID,
@@ -34,7 +36,7 @@ func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*mode
 		input.PercentRead,
 		time.Now(),
 		time.Now(),
-	).Scan(&ID)
+	).Scan(&ID, &CreatedAt, &UpdatedAt)
 	if err != nil {
 		log.Error("failed to save interactions entry: err: ", err)
 		return nil, err
@@ -45,6 +47,8 @@ func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*mode
 		ContentItemID: input.ContentItemID,
 		ReadState:     input.ReadState,
 		PercentRead:   input.PercentRead,
+		CreatedAt:     CreatedAt,
+		UpdatedAt:     UpdatedAt,
 	}, nil
 }
 

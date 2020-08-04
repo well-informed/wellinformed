@@ -237,6 +237,10 @@ func (r *queryResolver) GetInteractionByContentID(ctx context.Context, input int
 	return r.DB.GetInteractionByContentID(currentUser.ID, input)
 }
 
+func (r *queryResolver) GetInteractionsByUser(ctx context.Context, input *model.GetUserInput) ([]*model.Interaction, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {

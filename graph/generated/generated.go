@@ -115,6 +115,7 @@ type ComplexityRoot struct {
 	Query struct {
 		GetContentItem            func(childComplexity int, input int64) int
 		GetInteractionByContentID func(childComplexity int, input int64) int
+		GetInteractionsByUser     func(childComplexity int, input *model.GetUserInput) int
 		Me                        func(childComplexity int) int
 		PreferenceSets            func(childComplexity int) int
 		Sources                   func(childComplexity int) int
@@ -196,6 +197,7 @@ type QueryResolver interface {
 	User(ctx context.Context, input *model.GetUserInput) (*model.User, error)
 	GetContentItem(ctx context.Context, input int64) (*model.ContentItem, error)
 	GetInteractionByContentID(ctx context.Context, input int64) (*model.Interaction, error)
+	GetInteractionsByUser(ctx context.Context, input *model.GetUserInput) ([]*model.Interaction, error)
 	PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error)
 }
 type SrcRSSFeedResolver interface {
@@ -576,6 +578,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.GetInteractionByContentID(childComplexity, args["input"].(int64)), true
+
+	case "Query.getInteractionsByUser":
+		if e.complexity.Query.GetInteractionsByUser == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getInteractionsByUser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetInteractionsByUser(childComplexity, args["input"].(*model.GetUserInput)), true
 
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
@@ -1088,7 +1102,8 @@ type Query {
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
-  getInteractionByContentID(input: ID!): Interaction!
+  getInteractionByContentID(input: ID!): Interaction
+  getInteractionsByUser(input: GetUserInput): [Interaction]
   preferenceSets: [PreferenceSet!]!
 }
 
@@ -1244,6 +1259,20 @@ func (ec *executionContext) field_Query_getInteractionByContentID_args(ctx conte
 	var arg0 int64
 	if tmp, ok := rawArgs["input"]; ok {
 		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getInteractionsByUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.GetUserInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOGetUserInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐGetUserInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2999,14 +3028,49 @@ func (ec *executionContext) _Query_getInteractionByContentID(ctx context.Context
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(*model.Interaction)
 	fc.Result = res
-	return ec.marshalNInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, field.Selections, res)
+	return ec.marshalOInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_getInteractionsByUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_getInteractionsByUser_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().GetInteractionsByUser(rctx, args["input"].(*model.GetUserInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Interaction)
+	fc.Result = res
+	return ec.marshalOInteraction2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_preferenceSets(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5981,9 +6045,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getInteractionByContentID(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
+				return res
+			})
+		case "getInteractionsByUser":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getInteractionsByUser(ctx, field)
 				return res
 			})
 		case "preferenceSets":

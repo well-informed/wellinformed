@@ -164,7 +164,8 @@ type Query {
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
-  getInteractionByContentID(input: ID!): Interaction!
+  getInteractionByContentID(input: ID!): Interaction
+  getInteractionsByUser(input: GetUserInput): [Interaction]
   preferenceSets: [PreferenceSet!]!
 }
 
