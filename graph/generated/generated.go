@@ -181,7 +181,7 @@ type MutationResolver interface {
 	DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
-	SaveInteraction(ctx context.Context, input *model.InteractionInput) (*model.Interaction, error)
+	SaveInteraction(ctx context.Context, input *model.InteractionInput) (*model.ContentItem, error)
 	SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error)
 }
 type PreferenceSetResolver interface {
@@ -1116,7 +1116,7 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
-  saveInteraction(input: InteractionInput): Interaction!
+  saveInteraction(input: InteractionInput): ContentItem!
   savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }
 `, BuiltIn: false},
@@ -2494,9 +2494,9 @@ func (ec *executionContext) _Mutation_saveInteraction(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Interaction)
+	res := resTmp.(*model.ContentItem)
 	fc.Result = res
-	return ec.marshalNInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, field.Selections, res)
+	return ec.marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItem(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_savePreferenceSet(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -6774,20 +6774,6 @@ func (ec *executionContext) marshalNID2int64(ctx context.Context, sel ast.Select
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNInteraction2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx context.Context, sel ast.SelectionSet, v model.Interaction) graphql.Marshaler {
-	return ec._Interaction(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx context.Context, sel ast.SelectionSet, v *model.Interaction) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._Interaction(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐLoginInput(ctx context.Context, v interface{}) (model.LoginInput, error) {

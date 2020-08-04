@@ -178,6 +178,6 @@ type Mutation {
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
-  saveInteraction(input: InteractionInput): Interaction!
+  saveInteraction(input: InteractionInput): ContentItem!
   savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
 }

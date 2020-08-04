@@ -8,7 +8,7 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
-func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*model.Interaction, error) {
+func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*model.ContentItem, error) {
 	stmt := `INSERT INTO interactions
 	( user_id,
 		content_item_id,
@@ -41,15 +41,7 @@ func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*mode
 		log.Error("failed to save interactions entry: err: ", err)
 		return nil, err
 	}
-	return &model.Interaction{
-		ID:            ID,
-		UserID:        userID,
-		ContentItemID: input.ContentItemID,
-		ReadState:     input.ReadState,
-		PercentRead:   input.PercentRead,
-		CreatedAt:     CreatedAt,
-		UpdatedAt:     UpdatedAt,
-	}, nil
+	return db.GetContentItem(input.ContentItemID)
 }
 
 func (db DB) GetInteractionByContentID(userID int64, contentItemID int64) (*model.Interaction, error) {

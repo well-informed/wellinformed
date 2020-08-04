@@ -120,7 +120,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	return r.UserService.Login(ctx, input)
 }
 
-func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.InteractionInput) (*model.Interaction, error) {
+func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.InteractionInput) (*model.ContentItem, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
