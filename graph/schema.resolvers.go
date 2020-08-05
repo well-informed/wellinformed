@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
@@ -37,18 +36,10 @@ func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.Conten
 }
 
 func (r *interactionResolver) User(ctx context.Context, obj *model.Interaction) (*model.User, error) {
-	_, err := auth.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		return nil, err
-	}
 	return r.DB.GetUserByInteraction(obj.ID)
 }
 
 func (r *interactionResolver) ContentItem(ctx context.Context, obj *model.Interaction) (*model.ContentItem, error) {
-	_, err := auth.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		return nil, err
-	}
 	return r.DB.GetContentItemByInteraction(obj.ID)
 }
 
@@ -176,7 +167,7 @@ func (r *queryResolver) Sources(ctx context.Context) ([]*model.SrcRSSFeed, error
 func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
-		log.Printf("error while getting user feed: %v", err)
+		log.Errorf("error while getting user feed: %v", err)
 		return nil, errors.New("You are not signed in!")
 	}
 	log.Printf("currentUser: %v", currentUser)
@@ -186,7 +177,7 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
-		log.Printf("error while getting user feed: %v", err)
+		log.Errorf("error while getting user feed: %v", err)
 		return nil, errors.New("You are not signed in!")
 	}
 	return currentUser, nil
@@ -234,10 +225,6 @@ func (r *queryResolver) GetInteractionByContentID(ctx context.Context, input int
 	}
 
 	return r.DB.GetInteractionByContentID(currentUser.ID, input)
-}
-
-func (r *queryResolver) GetInteractionsByUser(ctx context.Context, input *model.GetUserInput) ([]*model.Interaction, error) {
-	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
@@ -300,7 +287,7 @@ func (r *userResolver) Interactions(ctx context.Context, obj *model.User, input 
 	var interactionInput *model.ReadState
 	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
-		log.Printf("error while getting user feed: %v", err)
+		log.Errorf("error while getting Interactions for a user: %v", err)
 		return nil, errors.New("You are not signed in!")
 	}
 

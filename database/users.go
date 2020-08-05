@@ -138,9 +138,10 @@ func (db DB) GetUserByInteraction(interactionId int64) (*model.User, error) {
 		&user.UpdatedAt,
 	)
 
-	if err == sql.ErrNoRows {
-		return nil, nil
+	if err != nil {
+		log.Error("failed to GetUserByInteraction: err: ", err)
+		return nil, err
 	}
 
-	return &user, err
+	return &user, nil
 }
