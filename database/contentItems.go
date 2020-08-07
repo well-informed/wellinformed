@@ -175,3 +175,22 @@ func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortT
 	return contentItems, nil
 
 }
+
+func (db DB) GetContentItemByInteraction(interactionId int64) (*model.ContentItem, error) {
+	var contentItem model.ContentItem
+
+	stmt := `
+		SELECT c.* FROM content_items c
+		INNER JOIN interactions i on c.id = i.content_item_id
+		WHERE i.id = $1
+		LIMIT 1
+	`
+
+	err := db.Get(&contentItem, stmt, interactionId)
+	if err != nil {
+		log.Errorf("failed to select content_item. err:", err)
+		return nil, err
+	}
+
+	return &contentItem, nil
+}

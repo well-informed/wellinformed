@@ -115,3 +115,33 @@ func (db DB) UpdateUser(user model.User) (model.User, error) {
 	user.ID = ID
 	return user, nil
 }
+
+func (db DB) GetUserByInteraction(interactionId int64) (*model.User, error) {
+	var user model.User
+
+	stmt := `
+		SELECT u.* FROM users u 
+		INNER JOIN interactions i on u.id = i.user_id
+		WHERE i.id = $1
+		LIMIT 1
+	`
+
+	err := db.QueryRow(stmt, interactionId).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Firstname,
+		&user.Lastname,
+		&user.Username,
+		&user.Password,
+		&user.ActivePreferenceSetName,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Error("failed to GetUserByInteraction: err: ", err)
+		return nil, err
+	}
+
+	return &user, nil
+}

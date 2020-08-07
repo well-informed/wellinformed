@@ -79,13 +79,15 @@ var tables = []table{
 		)`,
 	},
 	{
-		name: "history",
-		sql: `CREATE TABLE IF NOT EXISTS history
+		name: "interactions",
+		sql: `CREATE TABLE IF NOT EXISTS interactions
 		( id BIGSERIAL PRIMARY KEY,
 			user_id int NOT NULL REFERENCES users(id),
 			content_item_id int NOT NULL REFERENCES content_items(id),
 			read_state varchar NOT NULL,
-			percent_read int,
+			percent_read decimal,
+			created_at timestamp with time zone NOT NULL,
+			updated_at timestamp with time zone NOT NULL,
 			UNIQUE(user_id, content_item_id)
 		)`,
 	},

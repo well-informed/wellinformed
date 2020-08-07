@@ -45,13 +45,13 @@ func (db DB) SavePreferenceSet(prefSet *model.PreferenceSet) (*model.PreferenceS
 }
 
 func (db DB) GetPreferenceSetByID(id int64) (*model.PreferenceSet, error) {
-	var prefSet *model.PreferenceSet
-	err := db.Get(prefSet, "SELECT * FROM preference_sets WHERE id = $1", id)
+	var prefSet model.PreferenceSet
+	err := db.Get(&prefSet, "SELECT * FROM preference_sets WHERE id = $1", id)
 	if err != nil {
 		log.Errorf("failed to get preferenceSet by id. err: ", err)
 		return nil, err
 	}
-	return prefSet, nil
+	return &prefSet, nil
 }
 
 func (db DB) ListPreferenceSetsByUser(userID int64) ([]*model.PreferenceSet, error) {

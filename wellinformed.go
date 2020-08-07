@@ -29,9 +29,11 @@ type Persistor interface {
 	ListPreferenceSetsByUser(userID int64) ([]*model.PreferenceSet, error)
 	GetPreferenceSetByID(id int64) (*model.PreferenceSet, error)
 	GetPreferenceSetByName(userID int64, name string) (*model.PreferenceSet, error)
-	SaveHistory(userID int64, hstory *model.HistoryInput) (*model.History, error)
-	ListUserHistory(userID int64) ([]*model.History, error)
-	GetHistoryByContentID(userID int64, contentItemID int64) (*model.History, error)
+	SaveInteraction(userID int64, interaction *model.InteractionInput) (*model.ContentItem, error)
+	ListUserInteractions(userID int64, readState *model.ReadState) ([]*model.Interaction, error)
+	GetInteractionByContentID(userID int64, contentItemID int64) (*model.Interaction, error)
+	GetUserByInteraction(interactionID int64) (*model.User, error)
+	GetContentItemByInteraction(contentItemID int64) (*model.ContentItem, error)
 }
 
 type RSS interface {
