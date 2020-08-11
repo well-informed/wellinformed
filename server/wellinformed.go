@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -10,6 +9,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 	log "github.com/sirupsen/logrus"
+	"github.com/well-informed/wellinformed"
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
 	feed "github.com/well-informed/wellinformed/feedService"
@@ -23,14 +23,12 @@ import (
 const defaultPort = "8080"
 
 func main() {
-	log.SetLevel(log.DebugLevel)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
+	conf := wellinformed.GetConfig()
 
-	db := database.NewDB()
+	log.SetLevel(conf.LogLevel)
+
+	db := database.NewDB(conf)
 	rss := rss.NewRSS()
 	sub, err := subscriber.NewSubscriber(rss, db)
 	if err != nil {
@@ -51,7 +49,8 @@ func main() {
 	// Basic CORS
 	// for more ideas, see: https://developer.github.com/v3/#cross-origin-resource-sharing
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:8080"},
+		AllowedOrigins: []string{"*"},
+		// AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:8080"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"},
 		ExposedHeaders:   []string{"*"},
@@ -70,6 +69,6 @@ func main() {
 
 	router.Post("/refresh_token", auth.RefreshToken(resolver.DB))
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Printf("connect to http://localhost:%s/ for GraphQL playground", conf.ServerPort)
+	log.Fatal(http.ListenAndServe(":"+conf.ServerPort, router))
 }

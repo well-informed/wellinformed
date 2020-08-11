@@ -2,7 +2,7 @@ up:
 	docker-compose up -d
 
 run:
-	go run server/server.go
+	go run server/wellinformed.go
 
 #destroys db
 down:
@@ -18,3 +18,6 @@ gql:
 
 test:
 	go test -v ./...
+
+build-prod:
+	GOOS=linux go build server/wellinformed.go

@@ -1,9 +1,12 @@
 package database
 
 import (
+	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"github.com/well-informed/wellinformed"
 )
 
 type DB struct {
@@ -12,9 +15,10 @@ type DB struct {
 
 /*NewDB Creates a new handle on the database
 and creates necessary tables if they do not already exist*/
-func NewDB() DB {
-	connStr := "user=postgres password=password dbname=postgres sslmode=disable"
-	db, err := sqlx.Open("postgres", connStr)
+func NewDB(conf wellinformed.Config) DB {
+	format := "host=%v  dbname=%v user=%v password=%v sslmode=disable"
+	connStr := fmt.Sprintf(format, conf.DBHost, conf.DBName, conf.DBUser, conf.DBPassword)
+	db, err := sqlx.Connect("postgres", connStr)
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
