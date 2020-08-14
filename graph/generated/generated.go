@@ -117,7 +117,7 @@ type ComplexityRoot struct {
 		GetInteractionByContentID func(childComplexity int, input int64) int
 		Me                        func(childComplexity int) int
 		PreferenceSets            func(childComplexity int) int
-		Sources                   func(childComplexity int) int
+		Sources                   func(childComplexity int, input *model.SrcRSSFeedsConnectionInput) int
 		SrcRSSFeed                func(childComplexity int, input *model.SrcRSSFeedInput) int
 		User                      func(childComplexity int, input *model.GetUserInput) int
 		UserFeed                  func(childComplexity int) int
@@ -137,6 +137,23 @@ type ComplexityRoot struct {
 		Updated       func(childComplexity int) int
 	}
 
+	SrcRSSFeedEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
+	}
+
+	SrcRSSFeedsConnection struct {
+		Edges    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
+	SrcRSSFeedsPageInfo struct {
+		EndCursor       func(childComplexity int) int
+		HasNextPage     func(childComplexity int) int
+		HasPreviousPage func(childComplexity int) int
+		StartCursor     func(childComplexity int) int
+	}
+
 	User struct {
 		ActivePreferenceSet func(childComplexity int) int
 		CreatedAt           func(childComplexity int) int
@@ -144,11 +161,11 @@ type ComplexityRoot struct {
 		Feed                func(childComplexity int) int
 		Firstname           func(childComplexity int) int
 		ID                  func(childComplexity int) int
-		Interactions        func(childComplexity int, input *model.UserInteractionsInput) int
+		Interactions        func(childComplexity int, input *model.UserInteractionInput) int
 		Lastname            func(childComplexity int) int
 		Password            func(childComplexity int) int
 		PreferenceSets      func(childComplexity int) int
-		SrcRSSFeeds         func(childComplexity int) int
+		SrcRSSFeeds         func(childComplexity int, input *model.SrcRSSFeedsConnectionInput) int
 		Subscriptions       func(childComplexity int) int
 		UpdatedAt           func(childComplexity int) int
 		Username            func(childComplexity int) int
@@ -190,7 +207,7 @@ type PreferenceSetResolver interface {
 }
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
-	Sources(ctx context.Context) ([]*model.SrcRSSFeed, error)
+	Sources(ctx context.Context, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error)
 	UserFeed(ctx context.Context) (*model.UserFeed, error)
 	Me(ctx context.Context) (*model.User, error)
 	User(ctx context.Context, input *model.GetUserInput) (*model.User, error)
@@ -204,12 +221,12 @@ type SrcRSSFeedResolver interface {
 }
 type UserResolver interface {
 	Feed(ctx context.Context, obj *model.User) (*model.UserFeed, error)
-	SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error)
+	SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error)
 	PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error)
 	ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error)
 
 	Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error)
-	Interactions(ctx context.Context, obj *model.User, input *model.UserInteractionsInput) ([]*model.Interaction, error)
+	Interactions(ctx context.Context, obj *model.User, input *model.UserInteractionInput) ([]*model.Interaction, error)
 }
 type UserSubscriptionResolver interface {
 	User(ctx context.Context, obj *model.UserSubscription) (*model.User, error)
@@ -596,7 +613,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.Sources(childComplexity), true
+		args, err := ec.field_Query_sources_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Sources(childComplexity, args["input"].(*model.SrcRSSFeedsConnectionInput)), true
 
 	case "Query.srcRSSFeed":
 		if e.complexity.Query.SrcRSSFeed == nil {
@@ -706,6 +728,62 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SrcRSSFeed.Updated(childComplexity), true
 
+	case "SrcRSSFeedEdge.cursor":
+		if e.complexity.SrcRSSFeedEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedEdge.Cursor(childComplexity), true
+
+	case "SrcRSSFeedEdge.node":
+		if e.complexity.SrcRSSFeedEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedEdge.Node(childComplexity), true
+
+	case "SrcRSSFeedsConnection.edges":
+		if e.complexity.SrcRSSFeedsConnection.Edges == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedsConnection.Edges(childComplexity), true
+
+	case "SrcRSSFeedsConnection.pageInfo":
+		if e.complexity.SrcRSSFeedsConnection.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedsConnection.PageInfo(childComplexity), true
+
+	case "SrcRSSFeedsPageInfo.endCursor":
+		if e.complexity.SrcRSSFeedsPageInfo.EndCursor == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedsPageInfo.EndCursor(childComplexity), true
+
+	case "SrcRSSFeedsPageInfo.hasNextPage":
+		if e.complexity.SrcRSSFeedsPageInfo.HasNextPage == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedsPageInfo.HasNextPage(childComplexity), true
+
+	case "SrcRSSFeedsPageInfo.hasPreviousPage":
+		if e.complexity.SrcRSSFeedsPageInfo.HasPreviousPage == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedsPageInfo.HasPreviousPage(childComplexity), true
+
+	case "SrcRSSFeedsPageInfo.startCursor":
+		if e.complexity.SrcRSSFeedsPageInfo.StartCursor == nil {
+			break
+		}
+
+		return e.complexity.SrcRSSFeedsPageInfo.StartCursor(childComplexity), true
+
 	case "User.activePreferenceSet":
 		if e.complexity.User.ActivePreferenceSet == nil {
 			break
@@ -758,7 +836,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.User.Interactions(childComplexity, args["input"].(*model.UserInteractionsInput)), true
+		return e.complexity.User.Interactions(childComplexity, args["input"].(*model.UserInteractionInput)), true
 
 	case "User.lastname":
 		if e.complexity.User.Lastname == nil {
@@ -786,7 +864,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.User.SrcRSSFeeds(childComplexity), true
+		args, err := ec.field_User_srcRSSFeeds_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.User.SrcRSSFeeds(childComplexity, args["input"].(*model.SrcRSSFeedsConnectionInput)), true
 
 	case "User.subscriptions":
 		if e.complexity.User.Subscriptions == nil {
@@ -934,6 +1017,28 @@ type AuthResponse {
   user: User!
 }
 
+input SrcRSSFeedsConnectionInput {
+  first: Int!
+  after: String
+}
+
+type SrcRSSFeedsConnection {
+  edges: [SrcRSSFeedEdge!]!
+  pageInfo: SrcRSSFeedsPageInfo!
+}
+
+type SrcRSSFeedEdge {
+  node: SrcRSSFeed!
+  cursor: String!
+}
+
+type SrcRSSFeedsPageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
+
 type SrcRSSFeed {
   id: ID!
   title: String!
@@ -944,9 +1049,32 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
+  # contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
   contentItems: [ContentItem!]!
   isSubscribed: Boolean!
 }
+
+# input ContentItemsConnectionInput {
+#   first: Int!
+#   after: String
+# }
+
+# type ContentItemsConnection {
+#   edges: [ContentItemEdge!]!
+#   pageInfo: ContentItemsPageInfo!
+# }
+
+# type ContentItemEdge {
+#   node: ContentItem!
+#   cursor: String!
+# }
+
+# type ContentItemsPageInfo {
+#   hasPreviousPage: Boolean!
+#   hasNextPage: Boolean!
+#   startCursor: String!
+#   endCursor: String!
+# }
 
 input ContentItemInteractionsInput {
   userID: ID
@@ -971,6 +1099,28 @@ type ContentItem {
   interaction(input: ContentItemInteractionsInput): Interaction
 }
 
+# input UserSubscriptionsConnectionInput {
+#   first: Int!
+#   after: String
+# }
+
+# type UserSubscriptionsConnection {
+#   edges: [UserSubscriptionEdge!]!
+#   pageInfo: UserSubscriptionsPageInfo!
+# }
+
+# type UserSubscriptionEdge {
+#   node: UserSubscription!
+#   cursor: String!
+# }
+
+# type UserSubscriptionsPageInfo {
+#   hasPreviousPage: Boolean!
+#   hasNextPage: Boolean!
+#   startCursor: String!
+#   endCursor: String!
+# }
+
 type UserSubscription {
   id: ID!
   user: User!
@@ -981,12 +1131,36 @@ type UserSubscription {
 type UserFeed {
   userID: ID!
   name: String!
+  # contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
   contentItems: [ContentItem!]!
 }
 
-input UserInteractionsInput {
+input UserInteractionInput {
   readState: ReadState
 }
+
+# input UserInteractionsConnectionInput {
+#   first: Int!
+#   after: String
+#   readState: ReadState
+# }
+
+# type UserInteractionsConnection {
+#   edges: [UserInteractionEdge!]!
+#   pageInfo: UserInteractionsPageInfo!
+# }
+
+# type UserInteractionEdge {
+#   node: Interaction!
+#   cursor: String!
+# }
+
+# type UserInteractionsPageInfo {
+#   hasPreviousPage: Boolean!
+#   hasNextPage: Boolean!
+#   startCursor: String!
+#   endCursor: String!
+# }
 
 type User {
   id: ID!
@@ -996,13 +1170,15 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
-  srcRSSFeeds: [SrcRSSFeed!]!
+  srcRSSFeeds(input: SrcRSSFeedsConnectionInput): SrcRSSFeedsConnection!
   preferenceSets: [PreferenceSet!]!
   activePreferenceSet: PreferenceSet!
   createdAt: Time!
   updatedAt: Time!
-  subscriptions: [UserSubscription!]
-  interactions(input: UserInteractionsInput): [Interaction]
+  # subscriptions(input: UserSubscriptionsConnectionInput): UserSubscriptionsConnection!
+  subscriptions: [UserSubscription!]!
+  # interactions(input: UserInteractionsConnectionInput): UserInteractionsConnection
+  interactions(input: UserInteractionInput): [Interaction!]!
 }
 
 type PreferenceSet {
@@ -1083,7 +1259,7 @@ input GetUserInput {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
-  sources: [SrcRSSFeed!]!
+  sources(input: SrcRSSFeedsConnectionInput): SrcRSSFeedsConnection!
   userFeed: UserFeed!
   me: User!
   user(input: GetUserInput): User!
@@ -1252,6 +1428,20 @@ func (ec *executionContext) field_Query_getInteractionByContentID_args(ctx conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_sources_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.SrcRSSFeedsConnectionInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOSrcRSSFeedsConnectionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnectionInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_srcRSSFeed_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1283,9 +1473,23 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 func (ec *executionContext) field_User_interactions_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *model.UserInteractionsInput
+	var arg0 *model.UserInteractionInput
 	if tmp, ok := rawArgs["input"]; ok {
-		arg0, err = ec.unmarshalOUserInteractionsInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionsInput(ctx, tmp)
+		arg0, err = ec.unmarshalOUserInteractionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_User_srcRSSFeeds_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.SrcRSSFeedsConnectionInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOSrcRSSFeedsConnectionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnectionInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2802,9 +3006,16 @@ func (ec *executionContext) _Query_sources(ctx context.Context, field graphql.Co
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_sources_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Sources(rctx)
+		return ec.resolvers.Query().Sources(rctx, args["input"].(*model.SrcRSSFeedsConnectionInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2816,9 +3027,9 @@ func (ec *executionContext) _Query_sources(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.SrcRSSFeed)
+	res := resTmp.(*model.SrcRSSFeedsConnection)
 	fc.Result = res
-	return ec.marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx, field.Selections, res)
+	return ec.marshalNSrcRSSFeedsConnection2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnection(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_userFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3477,6 +3688,278 @@ func (ec *executionContext) _SrcRSSFeed_isSubscribed(ctx context.Context, field 
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _SrcRSSFeedEdge_node(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedEdge",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Node, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.SrcRSSFeed)
+	fc.Result = res
+	return ec.marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeedEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedEdge",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Cursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeedsConnection_edges(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedsConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedsConnection",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Edges, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SrcRSSFeedEdge)
+	fc.Result = res
+	return ec.marshalNSrcRSSFeedEdge2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedEdgeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeedsConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedsConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedsConnection",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.SrcRSSFeedsPageInfo)
+	fc.Result = res
+	return ec.marshalNSrcRSSFeedsPageInfo2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeedsPageInfo_hasPreviousPage(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasPreviousPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeedsPageInfo_hasNextPage(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasNextPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeedsPageInfo_startCursor(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _SrcRSSFeedsPageInfo_endCursor(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeedsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "SrcRSSFeedsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3730,9 +4213,16 @@ func (ec *executionContext) _User_srcRSSFeeds(ctx context.Context, field graphql
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_User_srcRSSFeeds_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().SrcRSSFeeds(rctx, obj)
+		return ec.resolvers.User().SrcRSSFeeds(rctx, obj, args["input"].(*model.SrcRSSFeedsConnectionInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3744,9 +4234,9 @@ func (ec *executionContext) _User_srcRSSFeeds(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.SrcRSSFeed)
+	res := resTmp.(*model.SrcRSSFeedsConnection)
 	fc.Result = res
-	return ec.marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx, field.Selections, res)
+	return ec.marshalNSrcRSSFeedsConnection2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnection(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_preferenceSets(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -3909,11 +4399,14 @@ func (ec *executionContext) _User_subscriptions(ctx context.Context, field graph
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.([]*model.UserSubscription)
 	fc.Result = res
-	return ec.marshalOUserSubscription2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscriptionᚄ(ctx, field.Selections, res)
+	return ec.marshalNUserSubscription2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscriptionᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_interactions(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -3940,18 +4433,21 @@ func (ec *executionContext) _User_interactions(ctx context.Context, field graphq
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().Interactions(rctx, obj, args["input"].(*model.UserInteractionsInput))
+		return ec.resolvers.User().Interactions(rctx, obj, args["input"].(*model.UserInteractionInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
 	res := resTmp.([]*model.Interaction)
 	fc.Result = res
-	return ec.marshalOInteraction2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, field.Selections, res)
+	return ec.marshalNInteraction2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteractionᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserFeed_userID(ctx context.Context, field graphql.CollectedField, obj *model.UserFeed) (ret graphql.Marshaler) {
@@ -5469,8 +5965,32 @@ func (ec *executionContext) unmarshalInputSrcRSSFeedInput(ctx context.Context, o
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputUserInteractionsInput(ctx context.Context, obj interface{}) (model.UserInteractionsInput, error) {
-	var it model.UserInteractionsInput
+func (ec *executionContext) unmarshalInputSrcRSSFeedsConnectionInput(ctx context.Context, obj interface{}) (model.SrcRSSFeedsConnectionInput, error) {
+	var it model.SrcRSSFeedsConnectionInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "first":
+			var err error
+			it.First, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "after":
+			var err error
+			it.After, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUserInteractionInput(ctx context.Context, obj interface{}) (model.UserInteractionInput, error) {
+	var it model.UserInteractionInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -6101,6 +6621,112 @@ func (ec *executionContext) _SrcRSSFeed(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var srcRSSFeedEdgeImplementors = []string{"SrcRSSFeedEdge"}
+
+func (ec *executionContext) _SrcRSSFeedEdge(ctx context.Context, sel ast.SelectionSet, obj *model.SrcRSSFeedEdge) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, srcRSSFeedEdgeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SrcRSSFeedEdge")
+		case "node":
+			out.Values[i] = ec._SrcRSSFeedEdge_node(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "cursor":
+			out.Values[i] = ec._SrcRSSFeedEdge_cursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var srcRSSFeedsConnectionImplementors = []string{"SrcRSSFeedsConnection"}
+
+func (ec *executionContext) _SrcRSSFeedsConnection(ctx context.Context, sel ast.SelectionSet, obj *model.SrcRSSFeedsConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, srcRSSFeedsConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SrcRSSFeedsConnection")
+		case "edges":
+			out.Values[i] = ec._SrcRSSFeedsConnection_edges(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._SrcRSSFeedsConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var srcRSSFeedsPageInfoImplementors = []string{"SrcRSSFeedsPageInfo"}
+
+func (ec *executionContext) _SrcRSSFeedsPageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.SrcRSSFeedsPageInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, srcRSSFeedsPageInfoImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SrcRSSFeedsPageInfo")
+		case "hasPreviousPage":
+			out.Values[i] = ec._SrcRSSFeedsPageInfo_hasPreviousPage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "hasNextPage":
+			out.Values[i] = ec._SrcRSSFeedsPageInfo_hasNextPage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "startCursor":
+			out.Values[i] = ec._SrcRSSFeedsPageInfo_startCursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "endCursor":
+			out.Values[i] = ec._SrcRSSFeedsPageInfo_endCursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var userImplementors = []string{"User"}
 
 func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
@@ -6217,6 +6843,9 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._User_subscriptions(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			})
 		case "interactions":
@@ -6228,6 +6857,9 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._User_interactions(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			})
 		default:
@@ -6736,6 +7368,71 @@ func (ec *executionContext) marshalNID2int64(ctx context.Context, sel ast.Select
 	return res
 }
 
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	return graphql.UnmarshalInt(v)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) marshalNInteraction2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx context.Context, sel ast.SelectionSet, v model.Interaction) graphql.Marshaler {
+	return ec._Interaction(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNInteraction2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteractionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Interaction) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx context.Context, sel ast.SelectionSet, v *model.Interaction) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Interaction(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐLoginInput(ctx context.Context, v interface{}) (model.LoginInput, error) {
 	return ec.unmarshalInputLoginInput(ctx, v)
 }
@@ -6812,7 +7509,21 @@ func (ec *executionContext) marshalNSrcRSSFeed2githubᚗcomᚋwellᚑinformedᚋ
 	return ec._SrcRSSFeed(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SrcRSSFeed) graphql.Marshaler {
+func (ec *executionContext) marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx context.Context, sel ast.SelectionSet, v *model.SrcRSSFeed) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._SrcRSSFeed(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSrcRSSFeedEdge2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedEdge(ctx context.Context, sel ast.SelectionSet, v model.SrcRSSFeedEdge) graphql.Marshaler {
+	return ec._SrcRSSFeedEdge(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSrcRSSFeedEdge2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SrcRSSFeedEdge) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -6836,7 +7547,7 @@ func (ec *executionContext) marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinfor
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx, sel, v[i])
+			ret[i] = ec.marshalNSrcRSSFeedEdge2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedEdge(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -6849,14 +7560,42 @@ func (ec *executionContext) marshalNSrcRSSFeed2ᚕᚖgithubᚗcomᚋwellᚑinfor
 	return ret
 }
 
-func (ec *executionContext) marshalNSrcRSSFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeed(ctx context.Context, sel ast.SelectionSet, v *model.SrcRSSFeed) graphql.Marshaler {
+func (ec *executionContext) marshalNSrcRSSFeedEdge2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedEdge(ctx context.Context, sel ast.SelectionSet, v *model.SrcRSSFeedEdge) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
 		}
 		return graphql.Null
 	}
-	return ec._SrcRSSFeed(ctx, sel, v)
+	return ec._SrcRSSFeedEdge(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSrcRSSFeedsConnection2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnection(ctx context.Context, sel ast.SelectionSet, v model.SrcRSSFeedsConnection) graphql.Marshaler {
+	return ec._SrcRSSFeedsConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSrcRSSFeedsConnection2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnection(ctx context.Context, sel ast.SelectionSet, v *model.SrcRSSFeedsConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._SrcRSSFeedsConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNSrcRSSFeedsPageInfo2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsPageInfo(ctx context.Context, sel ast.SelectionSet, v model.SrcRSSFeedsPageInfo) graphql.Marshaler {
+	return ec._SrcRSSFeedsPageInfo(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSrcRSSFeedsPageInfo2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.SrcRSSFeedsPageInfo) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._SrcRSSFeedsPageInfo(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
@@ -6917,6 +7656,43 @@ func (ec *executionContext) marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformed�
 
 func (ec *executionContext) marshalNUserSubscription2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx context.Context, sel ast.SelectionSet, v model.UserSubscription) graphql.Marshaler {
 	return ec._UserSubscription(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserSubscription2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscriptionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UserSubscription) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUserSubscription2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalNUserSubscription2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx context.Context, sel ast.SelectionSet, v *model.UserSubscription) graphql.Marshaler {
@@ -7261,46 +8037,6 @@ func (ec *executionContext) marshalOInteraction2githubᚗcomᚋwellᚑinformed�
 	return ec._Interaction(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalOInteraction2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx context.Context, sel ast.SelectionSet, v []*model.Interaction) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalOInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
-}
-
 func (ec *executionContext) marshalOInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx context.Context, sel ast.SelectionSet, v *model.Interaction) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -7356,6 +8092,18 @@ func (ec *executionContext) unmarshalOSrcRSSFeedInput2ᚖgithubᚗcomᚋwellᚑi
 	return &res, err
 }
 
+func (ec *executionContext) unmarshalOSrcRSSFeedsConnectionInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnectionInput(ctx context.Context, v interface{}) (model.SrcRSSFeedsConnectionInput, error) {
+	return ec.unmarshalInputSrcRSSFeedsConnectionInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOSrcRSSFeedsConnectionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnectionInput(ctx context.Context, v interface{}) (*model.SrcRSSFeedsConnectionInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOSrcRSSFeedsConnectionInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSrcRSSFeedsConnectionInput(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
 	return graphql.UnmarshalString(v)
 }
@@ -7402,56 +8150,16 @@ func (ec *executionContext) marshalOTime2ᚖtimeᚐTime(ctx context.Context, sel
 	return ec.marshalOTime2timeᚐTime(ctx, sel, *v)
 }
 
-func (ec *executionContext) unmarshalOUserInteractionsInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionsInput(ctx context.Context, v interface{}) (model.UserInteractionsInput, error) {
-	return ec.unmarshalInputUserInteractionsInput(ctx, v)
+func (ec *executionContext) unmarshalOUserInteractionInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionInput(ctx context.Context, v interface{}) (model.UserInteractionInput, error) {
+	return ec.unmarshalInputUserInteractionInput(ctx, v)
 }
 
-func (ec *executionContext) unmarshalOUserInteractionsInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionsInput(ctx context.Context, v interface{}) (*model.UserInteractionsInput, error) {
+func (ec *executionContext) unmarshalOUserInteractionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionInput(ctx context.Context, v interface{}) (*model.UserInteractionInput, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOUserInteractionsInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionsInput(ctx, v)
+	res, err := ec.unmarshalOUserInteractionInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserInteractionInput(ctx, v)
 	return &res, err
-}
-
-func (ec *executionContext) marshalOUserSubscription2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscriptionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UserSubscription) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNUserSubscription2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

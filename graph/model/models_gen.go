@@ -63,10 +63,32 @@ type RegisterInput struct {
 	Lastname        string `json:"lastname"`
 }
 
+type SrcRSSFeedEdge struct {
+	Node   *SrcRSSFeed `json:"node"`
+	Cursor string      `json:"cursor"`
+}
+
 type SrcRSSFeedInput struct {
 	ID       *int64  `json:"id"`
 	Link     *string `json:"link"`
 	FeedLink *string `json:"feedLink"`
+}
+
+type SrcRSSFeedsConnection struct {
+	Edges    []*SrcRSSFeedEdge    `json:"edges"`
+	PageInfo *SrcRSSFeedsPageInfo `json:"pageInfo"`
+}
+
+type SrcRSSFeedsConnectionInput struct {
+	First int     `json:"first"`
+	After *string `json:"after"`
+}
+
+type SrcRSSFeedsPageInfo struct {
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	HasNextPage     bool   `json:"hasNextPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
 }
 
 type UserFeed struct {
@@ -75,7 +97,7 @@ type UserFeed struct {
 	ContentItems []*ContentItem `json:"contentItems"`
 }
 
-type UserInteractionsInput struct {
+type UserInteractionInput struct {
 	ReadState *ReadState `json:"readState"`
 }
 

@@ -153,8 +153,8 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	return feed, nil
 }
 
-func (r *queryResolver) Sources(ctx context.Context) ([]*model.SrcRSSFeed, error) {
-	sources, err := r.DB.ListSrcRSSFeeds()
+func (r *queryResolver) Sources(ctx context.Context, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+	sources, err := r.DB.PageSrcRSSFeeds(input)
 	if err != nil {
 		return nil, err
 	}
@@ -263,8 +263,8 @@ func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFe
 	return r.Query().UserFeed(ctx)
 }
 
-func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error) {
-	return r.DB.ListSrcRSSFeedsByUser(obj)
+func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+	return r.DB.PageSrcRSSFeedsByUser(obj, input)
 }
 
 func (r *userResolver) PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error) {
@@ -283,7 +283,7 @@ func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*m
 	return r.DB.ListUserSubscriptions(user.ID)
 }
 
-func (r *userResolver) Interactions(ctx context.Context, obj *model.User, input *model.UserInteractionsInput) ([]*model.Interaction, error) {
+func (r *userResolver) Interactions(ctx context.Context, obj *model.User, input *model.UserInteractionInput) ([]*model.Interaction, error) {
 	var interactionInput *model.ReadState
 	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {

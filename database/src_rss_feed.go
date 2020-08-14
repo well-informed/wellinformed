@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	b64 "encoding/base64"
 	"errors"
 
 	log "github.com/sirupsen/logrus"
@@ -81,21 +82,86 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 	return &feed, err
 }
 
+func buildPage(first int, after *string, edges []*model.SrcRSSFeedEdge) (*model.SrcRSSFeedsConnection, error) {
+	log.Debugf("how many edges before prune? %d", len(edges))
+	if after != nil {
+		for i := 0; i < len(edges); i++ {
+			if *after == edges[i].Cursor {
+				if i+1 == len(edges) {
+					return nil, errors.New("cursor not found in list")
+				} else if i+first+1 > len(edges) {
+					edges = edges[i+1:]
+				} else {
+					edges = edges[i+1 : i+first+1]
+				}
+				break
+			}
+		}
+	} else if first < len(edges) {
+		edges = edges[:first]
+	}
+	log.Debugf("how many edges after prune? %d", len(edges))
+	info := &model.SrcRSSFeedsPageInfo{
+		HasPreviousPage: len(edges) > 0 && after != nil,
+		HasNextPage:     len(edges) > first,
+		StartCursor:     edges[0].Cursor,
+		EndCursor:       edges[len(edges)-1].Cursor,
+	}
+	return &model.SrcRSSFeedsConnection{
+		Edges:    edges,
+		PageInfo: info,
+	}, nil
+}
+
+func feedsToEdges(feeds []*model.SrcRSSFeed) []*model.SrcRSSFeedEdge {
+	edges := make([]*model.SrcRSSFeedEdge, 0)
+	for _, feed := range feeds {
+		edges = append(edges, &model.SrcRSSFeedEdge{
+			Node:   feed,
+			Cursor: b64.StdEncoding.EncodeToString([]byte(feed.Updated.String())),
+		})
+	}
+	return edges
+}
+
+//Need to write this manually now...in order to select only the fields from the first table
+//Maybe there's a way to only select some fields?
+const feedsByUserStmt = `SELECT src_rss_feeds.*
+FROM src_rss_feeds
+INNER JOIN user_subscriptions
+ON src_rss_feeds.id = user_subscriptions.source_id
+WHERE user_subscriptions.user_id = $1 
+ORDER BY src_rss_feeds.id`
+
+func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+	feeds, err := db.listSrcRSSFeedsByQuery(feedsByUserStmt, user.ID)
+	edges := feedsToEdges(feeds)
+	if err != nil {
+		log.Error("error selecting base list of src_rss_feeds. err: ", err)
+	}
+	return buildPage(input.First, input.After, edges)
+}
+
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
-	//Need to write this manually now...in order to select only the fields from the first table
-	//Maybe there's a way to only select some fields?
-	return db.ListSrcRSSFeedsByQuery(`SELECT src_rss_feeds.*
-	FROM src_rss_feeds
-	INNER JOIN user_subscriptions
-	ON src_rss_feeds.id = user_subscriptions.source_id
-	WHERE user_subscriptions.user_id = $1`, user.ID)
+	return db.listSrcRSSFeedsByQuery(feedsByUserStmt, user.ID)
+}
+
+const allFeedsStmt = `SELECT * FROM src_rss_feeds ORDER BY id`
+
+func (db DB) PageSrcRSSFeeds(input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+	feeds, err := db.listSrcRSSFeedsByQuery(allFeedsStmt)
+	edges := feedsToEdges(feeds)
+	if err != nil {
+		log.Error("error selecting base list of src_rss_feeds. err: ", err)
+	}
+	return buildPage(input.First, input.After, edges)
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
-	return db.ListSrcRSSFeedsByQuery(`SELECT * FROM src_rss_feeds`)
+	return db.listSrcRSSFeedsByQuery(allFeedsStmt)
 }
 
-func (db DB) ListSrcRSSFeedsByQuery(stmt string, args ...interface{}) ([]*model.SrcRSSFeed, error) {
+func (db DB) listSrcRSSFeedsByQuery(stmt string, args ...interface{}) ([]*model.SrcRSSFeed, error) {
 	rows, err := db.Query(stmt, args...)
 	defer rows.Close()
 	if err != nil {
