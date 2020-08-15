@@ -172,7 +172,7 @@ type ComplexityRoot struct {
 		Password            func(childComplexity int) int
 		PreferenceSets      func(childComplexity int) int
 		SrcRSSFeeds         func(childComplexity int, input *model.ConnectionInput) int
-		Subscriptions       func(childComplexity int) int
+		Subscriptions       func(childComplexity int, input *model.ConnectionInput) int
 		UpdatedAt           func(childComplexity int) int
 		Username            func(childComplexity int) int
 	}
@@ -231,7 +231,7 @@ type UserResolver interface {
 	PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error)
 	ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error)
 
-	Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error)
+	Subscriptions(ctx context.Context, obj *model.User, input *model.ConnectionInput) (*model.Connection, error)
 	Interactions(ctx context.Context, obj *model.User, readState *model.ReadState, input model.ConnectionInput) (*model.Connection, error)
 }
 type UserSubscriptionResolver interface {
@@ -901,7 +901,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.User.Subscriptions(childComplexity), true
+		args, err := ec.field_User_subscriptions_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.User.Subscriptions(childComplexity, args["input"].(*model.ConnectionInput)), true
 
 	case "User.updatedAt":
 		if e.complexity.User.UpdatedAt == nil {
@@ -1089,7 +1094,6 @@ type UserSubscription {
 type UserFeed {
   userID: ID!
   name: String!
-  # contentItems(input: ConnectionInput): Connection!
   contentItems: [ContentItem!]!
 }
 
@@ -1135,8 +1139,7 @@ type User {
   activePreferenceSet: PreferenceSet!
   createdAt: Time!
   updatedAt: Time!
-  # subscriptions(input: ConnectionInput): Connection!
-  subscriptions: [UserSubscription!]!
+  subscriptions(input: ConnectionInput): Connection!
   interactions(readState: ReadState, input: ConnectionInput!): Connection!
 }
 
@@ -1466,6 +1469,20 @@ func (ec *executionContext) field_User_interactions_args(ctx context.Context, ra
 }
 
 func (ec *executionContext) field_User_srcRSSFeeds_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.ConnectionInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOConnectionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐConnectionInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_User_subscriptions_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 *model.ConnectionInput
@@ -4446,9 +4463,16 @@ func (ec *executionContext) _User_subscriptions(ctx context.Context, field graph
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_User_subscriptions_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().Subscriptions(rctx, obj)
+		return ec.resolvers.User().Subscriptions(rctx, obj, args["input"].(*model.ConnectionInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4460,9 +4484,9 @@ func (ec *executionContext) _User_subscriptions(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.UserSubscription)
+	res := resTmp.(*model.Connection)
 	fc.Result = res
-	return ec.marshalNUserSubscription2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscriptionᚄ(ctx, field.Selections, res)
+	return ec.marshalNConnection2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐConnection(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_interactions(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -7728,57 +7752,6 @@ func (ec *executionContext) marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformed�
 		return graphql.Null
 	}
 	return ec._UserFeed(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNUserSubscription2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx context.Context, sel ast.SelectionSet, v model.UserSubscription) graphql.Marshaler {
-	return ec._UserSubscription(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNUserSubscription2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscriptionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UserSubscription) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNUserSubscription2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
-}
-
-func (ec *executionContext) marshalNUserSubscription2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx context.Context, sel ast.SelectionSet, v *model.UserSubscription) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._UserSubscription(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

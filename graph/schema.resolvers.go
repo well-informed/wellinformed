@@ -275,12 +275,12 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSetName)
 }
 
-func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
+func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User, input *model.ConnectionInput) (*model.Connection, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.DB.ListUserSubscriptions(user.ID)
+	return r.DB.PageUserSubscriptions(user.ID, input)
 }
 
 func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readState *model.ReadState, input model.ConnectionInput) (*model.Connection, error) {

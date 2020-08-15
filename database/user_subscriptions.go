@@ -64,14 +64,25 @@ func (db DB) DeleteUserSubscription(userID int64, srcID int64) (int, error) {
 	return int(numDeleted), err
 }
 
-func (db DB) ListUserSubscriptions(userID int64) ([]*model.UserSubscription, error) {
+func subsToNodes(subs []*model.UserSubscription) []*model.Node {
+	nodes := make([]*model.Node, 0)
+	for _, sub := range subs {
+		nodes = append(nodes, &model.Node{
+			Value: sub,
+			ID:    sub.ID,
+		})
+	}
+	return nodes
+}
+
+func (db DB) PageUserSubscriptions(userID int64, input *model.ConnectionInput) (*model.Connection, error) {
 	stmt := `SELECT * FROM user_subscriptions WHERE user_id = $1`
 
-	var userSubscriptions []*model.UserSubscription
+	userSubscriptions := make([]*model.UserSubscription, 0)
 	err := db.Select(&userSubscriptions, stmt, userID)
 	if err != nil {
 		log.Error("error listing subscriptions for user. err: ", err)
 		return nil, err
 	}
-	return userSubscriptions, nil
+	return buildPage(input.First, input.After, nodesToEdges(subsToNodes(userSubscriptions)))
 }

@@ -21,7 +21,7 @@ type Persistor interface {
 	InsertUserSubscription(user model.User, src model.SrcRSSFeed) (*model.UserSubscription, error)
 	GetUserSubscription(userID int64, srcID int64) (*model.UserSubscription, error)
 	DeleteUserSubscription(userID int64, srcID int64) (int, error)
-	ListUserSubscriptions(userID int64) ([]*model.UserSubscription, error)
+	PageUserSubscriptions(userID int64, input *model.ConnectionInput) (*model.Connection, error)
 
 	// ContentItem Functions
 	GetContentItem(id int64) (*model.ContentItem, error)

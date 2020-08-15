@@ -57,7 +57,6 @@ type UserSubscription {
 type UserFeed {
   userID: ID!
   name: String!
-  # contentItems(input: ConnectionInput): Connection!
   contentItems: [ContentItem!]!
 }
 
@@ -103,8 +102,7 @@ type User {
   activePreferenceSet: PreferenceSet!
   createdAt: Time!
   updatedAt: Time!
-  # subscriptions(input: ConnectionInput): Connection!
-  subscriptions: [UserSubscription!]!
+  subscriptions(input: ConnectionInput): Connection!
   interactions(readState: ReadState, input: ConnectionInput!): Connection!
 }
 
