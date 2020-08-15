@@ -23,5 +23,4 @@ build-prod: pack-migrations
 	GOOS=linux go build server/wellinformed.go
 
 pack-migrations:
-
 	go-bindata -prefix "database/migrations/" -pkg migrations -o database/migrations/bindata.go database/migrations/
