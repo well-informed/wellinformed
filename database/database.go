@@ -45,7 +45,10 @@ func migrateSchema(dbURL string) {
 		log.Fatal("could not establish migrations source. err: ", err)
 	}
 	err = m.Up()
-	if err != nil {
-		log.Warn("could not run migration: ", err)
+	if err == migrate.ErrNoChange {
+		log.Warn("bypassing migration: ", err)
+	}
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatal("could not run migration: ", err)
 	}
 }
