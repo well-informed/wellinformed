@@ -36,6 +36,8 @@ type GetUserInput struct {
 type InteractionInput struct {
 	ContentItemID int64     `json:"contentItemID"`
 	ReadState     ReadState `json:"readState"`
+	Completed     *bool     `json:"completed"`
+	SavedForLater *bool     `json:"savedForLater"`
 	PercentRead   *float64  `json:"percentRead"`
 }
 

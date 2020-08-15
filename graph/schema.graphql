@@ -112,7 +112,12 @@ type Interaction {
   id: ID!
   user: User!
   contentItem: ContentItem!
+  """
+  deprecated in favor of completed and savedForLater bools
+  """
   readState: ReadState!
+  completed: Boolean!
+  savedForLater: Boolean!
   percentRead: Float!
   createdAt: Time!
   updatedAt: Time!
@@ -128,6 +133,8 @@ enum ReadState {
 input InteractionInput {
   contentItemID: ID!
   readState: ReadState!
+  completed: Boolean
+  savedForLater: Boolean
   percentRead: Float
 }
 

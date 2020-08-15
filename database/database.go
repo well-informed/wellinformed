@@ -16,14 +16,15 @@ type DB struct {
 /*NewDB Creates a new handle on the database
 and creates necessary tables if they do not already exist*/
 func NewDB(conf wellinformed.Config) DB {
-	format := "host=%v  dbname=%v user=%v password=%v sslmode=disable"
-	connStr := fmt.Sprintf(format, conf.DBHost, conf.DBName, conf.DBUser, conf.DBPassword)
+	// format := "host=%v dbname=%v user=%v password=%v sslmode=disable"
+	format := "postgres://%v:%v@%v:5432/%v?sslmode=disable"
+	connStr := fmt.Sprintf(format, conf.DBUser, conf.DBPassword, conf.DBHost, conf.DBName)
 	db, err := sqlx.Connect("postgres", connStr)
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
-	createTables(db, tables)
-
+	// createTables(db, tables)
+	migrateSchema(connStr)
 	return DB{db}
 }
 

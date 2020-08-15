@@ -65,6 +65,8 @@ type Interaction struct {
 	UserID        int64     `json:"user" db:"user_id"`
 	ContentItemID int64     `json:"contentItem" db:"content_item_id"`
 	ReadState     ReadState `json:"readState" db:"read_state"`
+	Completed     bool      `json:"completed" db:"completed"`
+	SavedForLater bool      `json:"savedForLater" db:"saved_for_later"`
 	PercentRead   *float64  `json:"percentRead" db:"percent_read"`
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
