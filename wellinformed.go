@@ -28,6 +28,7 @@ type Persistor interface {
 	InsertContentItem(model.ContentItem) (*model.ContentItem, error)
 	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
 	ServeContentItems([]*model.SrcRSSFeed, model.SortType, *time.Time, *time.Time) ([]*model.ContentItem, error)
+	PageContentItemsBySource(*model.SrcRSSFeed, *model.ContentItemsConnectionInput) (*model.ContentItemsConnection, error)
 
 	// User Functions
 	GetUserByEmail(email string) (*model.User, error)

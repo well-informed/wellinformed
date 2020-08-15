@@ -2,6 +2,8 @@ package database
 
 import (
 	"database/sql"
+	b64 "encoding/base64"
+	"errors"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -85,13 +87,67 @@ func (db DB) GetContentItem(id int64) (*model.ContentItem, error) {
 	return &contentItem, nil
 }
 
+func buildContentItemsPage(first int, after *string, edges []*model.ContentItemEdge) (*model.ContentItemsConnection, error) {
+	if after != nil {
+		for i := 0; i < len(edges); i++ {
+			if *after == edges[i].Cursor {
+				if i+1 == len(edges) {
+					return nil, errors.New("cursor not found in list")
+				} else if i+first+1 > len(edges) {
+					edges = edges[i+1:]
+				} else {
+					edges = edges[i+1 : i+first+1]
+				}
+				break
+			}
+		}
+	} else if first < len(edges) {
+		edges = edges[:first]
+	}
+	info := &model.ContentItemsPageInfo{
+		HasPreviousPage: len(edges) > 0 && after != nil,
+		HasNextPage:     len(edges) > first,
+		StartCursor:     edges[0].Cursor,
+		EndCursor:       edges[len(edges)-1].Cursor,
+	}
+	return &model.ContentItemsConnection{
+		Edges:    edges,
+		PageInfo: info,
+	}, nil
+}
+
+func itemsToEdges(items []*model.ContentItem) []*model.ContentItemEdge {
+	edges := make([]*model.ContentItemEdge, 0)
+	for _, item := range items {
+		edges = append(edges, &model.ContentItemEdge{
+			Node:   item,
+			Cursor: b64.StdEncoding.EncodeToString([]byte(string(item.ID))),
+		})
+	}
+	return edges
+}
+
+const itemsByFeedStmt = `SELECT * FROM content_items WHERE source_id = $1 ORDER BY id`
+
 func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("received query with src feed object: ", src)
-	stmt := `SELECT * FROM content_items WHERE source_id = $1`
-	rows, err := db.Query(stmt, src.ID)
+	return db.listContentItemsByQuery(itemsByFeedStmt, src.ID)
+}
+
+func (db DB) PageContentItemsBySource(src *model.SrcRSSFeed, input *model.ContentItemsConnectionInput) (*model.ContentItemsConnection, error) {
+	items, err := db.listContentItemsByQuery(itemsByFeedStmt, src.ID)
+	edges := itemsToEdges(items)
+	if err != nil {
+		log.Error("error selecting base content_items by source_rss_feed. err: ", err)
+	}
+	return buildContentItemsPage(input.First, input.After, edges)
+}
+
+func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model.ContentItem, error) {
+	rows, err := db.Query(stmt, args...)
 	defer rows.Close()
 	if err != nil {
-		log.Error("Error selecting content items by source from db. err: ", err)
+		log.Error("Error selecting content items from db. err: ", err)
 		return nil, err
 	}
 	contentItems := make([]*model.ContentItem, 0)
@@ -121,7 +177,7 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 		contentItems = append(contentItems, &contentItem)
 	}
 	if err := rows.Err(); err != nil {
-		log.Error("error while retrieving content items by source. err: ", err)
+		log.Error("error while retrieving content items. err: ", err)
 		return nil, err
 	}
 	return contentItems, nil

@@ -235,9 +235,9 @@ func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.Preference
 	return r.DB.ListPreferenceSetsByUser(user.ID)
 }
 
-func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
+func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ContentItemsConnectionInput) (*model.ContentItemsConnection, error) {
 	log.Debug("resolving ContentItems")
-	contentItems, err := r.DB.ListContentItemsBySource(obj)
+	contentItems, err := r.DB.PageContentItemsBySource(obj, input)
 	if err != nil {
 		return nil, err
 	}

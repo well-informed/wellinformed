@@ -19,8 +19,30 @@ type AuthToken struct {
 	ExpiredAt   time.Time `json:"expiredAt"`
 }
 
+type ContentItemEdge struct {
+	Node   *ContentItem `json:"node"`
+	Cursor string       `json:"cursor"`
+}
+
 type ContentItemInteractionsInput struct {
 	UserID *int64 `json:"userID"`
+}
+
+type ContentItemsConnection struct {
+	Edges    []*ContentItemEdge    `json:"edges"`
+	PageInfo *ContentItemsPageInfo `json:"pageInfo"`
+}
+
+type ContentItemsConnectionInput struct {
+	First int     `json:"first"`
+	After *string `json:"after"`
+}
+
+type ContentItemsPageInfo struct {
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	HasNextPage     bool   `json:"hasNextPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
 }
 
 type DeleteResponse struct {

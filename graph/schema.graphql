@@ -42,32 +42,31 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  # contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
-  contentItems: [ContentItem!]!
+  contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
   isSubscribed: Boolean!
 }
 
-# input ContentItemsConnectionInput {
-#   first: Int!
-#   after: String
-# }
+input ContentItemsConnectionInput {
+  first: Int!
+  after: String
+}
 
-# type ContentItemsConnection {
-#   edges: [ContentItemEdge!]!
-#   pageInfo: ContentItemsPageInfo!
-# }
+type ContentItemsConnection {
+  edges: [ContentItemEdge!]!
+  pageInfo: ContentItemsPageInfo!
+}
 
-# type ContentItemEdge {
-#   node: ContentItem!
-#   cursor: String!
-# }
+type ContentItemEdge {
+  node: ContentItem!
+  cursor: String!
+}
 
-# type ContentItemsPageInfo {
-#   hasPreviousPage: Boolean!
-#   hasNextPage: Boolean!
-#   startCursor: String!
-#   endCursor: String!
-# }
+type ContentItemsPageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
 
 input ContentItemInteractionsInput {
   userID: ID

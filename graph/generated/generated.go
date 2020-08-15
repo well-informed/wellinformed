@@ -79,6 +79,23 @@ type ComplexityRoot struct {
 		Updated     func(childComplexity int) int
 	}
 
+	ContentItemEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
+	}
+
+	ContentItemsConnection struct {
+		Edges    func(childComplexity int) int
+		PageInfo func(childComplexity int) int
+	}
+
+	ContentItemsPageInfo struct {
+		EndCursor       func(childComplexity int) int
+		HasNextPage     func(childComplexity int) int
+		HasPreviousPage func(childComplexity int) int
+		StartCursor     func(childComplexity int) int
+	}
+
 	DeleteResponse struct {
 		Ok func(childComplexity int) int
 	}
@@ -124,7 +141,7 @@ type ComplexityRoot struct {
 	}
 
 	SrcRSSFeed struct {
-		ContentItems  func(childComplexity int) int
+		ContentItems  func(childComplexity int, input *model.ContentItemsConnectionInput) int
 		Description   func(childComplexity int) int
 		FeedLink      func(childComplexity int) int
 		Generator     func(childComplexity int) int
@@ -216,7 +233,7 @@ type QueryResolver interface {
 	PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error)
 }
 type SrcRSSFeedResolver interface {
-	ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error)
+	ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ContentItemsConnectionInput) (*model.ContentItemsConnection, error)
 	IsSubscribed(ctx context.Context, obj *model.SrcRSSFeed) (bool, error)
 }
 type UserResolver interface {
@@ -392,6 +409,62 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.ContentItem.Updated(childComplexity), true
+
+	case "ContentItemEdge.cursor":
+		if e.complexity.ContentItemEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.ContentItemEdge.Cursor(childComplexity), true
+
+	case "ContentItemEdge.node":
+		if e.complexity.ContentItemEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.ContentItemEdge.Node(childComplexity), true
+
+	case "ContentItemsConnection.edges":
+		if e.complexity.ContentItemsConnection.Edges == nil {
+			break
+		}
+
+		return e.complexity.ContentItemsConnection.Edges(childComplexity), true
+
+	case "ContentItemsConnection.pageInfo":
+		if e.complexity.ContentItemsConnection.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.ContentItemsConnection.PageInfo(childComplexity), true
+
+	case "ContentItemsPageInfo.endCursor":
+		if e.complexity.ContentItemsPageInfo.EndCursor == nil {
+			break
+		}
+
+		return e.complexity.ContentItemsPageInfo.EndCursor(childComplexity), true
+
+	case "ContentItemsPageInfo.hasNextPage":
+		if e.complexity.ContentItemsPageInfo.HasNextPage == nil {
+			break
+		}
+
+		return e.complexity.ContentItemsPageInfo.HasNextPage(childComplexity), true
+
+	case "ContentItemsPageInfo.hasPreviousPage":
+		if e.complexity.ContentItemsPageInfo.HasPreviousPage == nil {
+			break
+		}
+
+		return e.complexity.ContentItemsPageInfo.HasPreviousPage(childComplexity), true
+
+	case "ContentItemsPageInfo.startCursor":
+		if e.complexity.ContentItemsPageInfo.StartCursor == nil {
+			break
+		}
+
+		return e.complexity.ContentItemsPageInfo.StartCursor(childComplexity), true
 
 	case "DeleteResponse.ok":
 		if e.complexity.DeleteResponse.Ok == nil {
@@ -656,7 +729,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.SrcRSSFeed.ContentItems(childComplexity), true
+		args, err := ec.field_SrcRSSFeed_contentItems_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.SrcRSSFeed.ContentItems(childComplexity, args["input"].(*model.ContentItemsConnectionInput)), true
 
 	case "SrcRSSFeed.description":
 		if e.complexity.SrcRSSFeed.Description == nil {
@@ -1049,32 +1127,31 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  # contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
-  contentItems: [ContentItem!]!
+  contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
   isSubscribed: Boolean!
 }
 
-# input ContentItemsConnectionInput {
-#   first: Int!
-#   after: String
-# }
+input ContentItemsConnectionInput {
+  first: Int!
+  after: String
+}
 
-# type ContentItemsConnection {
-#   edges: [ContentItemEdge!]!
-#   pageInfo: ContentItemsPageInfo!
-# }
+type ContentItemsConnection {
+  edges: [ContentItemEdge!]!
+  pageInfo: ContentItemsPageInfo!
+}
 
-# type ContentItemEdge {
-#   node: ContentItem!
-#   cursor: String!
-# }
+type ContentItemEdge {
+  node: ContentItem!
+  cursor: String!
+}
 
-# type ContentItemsPageInfo {
-#   hasPreviousPage: Boolean!
-#   hasNextPage: Boolean!
-#   startCursor: String!
-#   endCursor: String!
-# }
+type ContentItemsPageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
 
 input ContentItemInteractionsInput {
   userID: ID
@@ -1462,6 +1539,20 @@ func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs m
 	var arg0 *model.GetUserInput
 	if tmp, ok := rawArgs["input"]; ok {
 		arg0, err = ec.unmarshalOGetUserInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐGetUserInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_SrcRSSFeed_contentItems_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.ContentItemsConnectionInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalOContentItemsConnectionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsConnectionInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2198,6 +2289,278 @@ func (ec *executionContext) _ContentItem_interaction(ctx context.Context, field 
 	res := resTmp.(*model.Interaction)
 	fc.Result = res
 	return ec.marshalOInteraction2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemEdge_node(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemEdge",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Node, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ContentItem)
+	fc.Result = res
+	return ec.marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemEdge) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemEdge",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Cursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemsConnection_edges(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemsConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemsConnection",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Edges, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.ContentItemEdge)
+	fc.Result = res
+	return ec.marshalNContentItemEdge2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemEdgeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemsConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemsConnection) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemsConnection",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PageInfo, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.ContentItemsPageInfo)
+	fc.Result = res
+	return ec.marshalNContentItemsPageInfo2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsPageInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemsPageInfo_hasPreviousPage(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasPreviousPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemsPageInfo_hasNextPage(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.HasNextPage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemsPageInfo_startCursor(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ContentItemsPageInfo_endCursor(ctx context.Context, field graphql.CollectedField, obj *model.ContentItemsPageInfo) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "ContentItemsPageInfo",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _DeleteResponse_ok(ctx context.Context, field graphql.CollectedField, obj *model.DeleteResponse) (ret graphql.Marshaler) {
@@ -3635,9 +3998,16 @@ func (ec *executionContext) _SrcRSSFeed_contentItems(ctx context.Context, field 
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_SrcRSSFeed_contentItems_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.SrcRSSFeed().ContentItems(rctx, obj)
+		return ec.resolvers.SrcRSSFeed().ContentItems(rctx, obj, args["input"].(*model.ContentItemsConnectionInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3649,9 +4019,9 @@ func (ec *executionContext) _SrcRSSFeed_contentItems(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.ContentItem)
+	res := resTmp.(*model.ContentItemsConnection)
 	fc.Result = res
-	return ec.marshalNContentItem2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemᚄ(ctx, field.Selections, res)
+	return ec.marshalNContentItemsConnection2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsConnection(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SrcRSSFeed_isSubscribed(ctx context.Context, field graphql.CollectedField, obj *model.SrcRSSFeed) (ret graphql.Marshaler) {
@@ -5761,6 +6131,30 @@ func (ec *executionContext) unmarshalInputContentItemInteractionsInput(ctx conte
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputContentItemsConnectionInput(ctx context.Context, obj interface{}) (model.ContentItemsConnectionInput, error) {
+	var it model.ContentItemsConnectionInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "first":
+			var err error
+			it.First, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "after":
+			var err error
+			it.After, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputGetUserInput(ctx context.Context, obj interface{}) (model.GetUserInput, error) {
 	var it model.GetUserInput
 	var asMap = obj.(map[string]interface{})
@@ -6158,6 +6552,112 @@ func (ec *executionContext) _ContentItem(ctx context.Context, sel ast.SelectionS
 				res = ec._ContentItem_interaction(ctx, field, obj)
 				return res
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var contentItemEdgeImplementors = []string{"ContentItemEdge"}
+
+func (ec *executionContext) _ContentItemEdge(ctx context.Context, sel ast.SelectionSet, obj *model.ContentItemEdge) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, contentItemEdgeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ContentItemEdge")
+		case "node":
+			out.Values[i] = ec._ContentItemEdge_node(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "cursor":
+			out.Values[i] = ec._ContentItemEdge_cursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var contentItemsConnectionImplementors = []string{"ContentItemsConnection"}
+
+func (ec *executionContext) _ContentItemsConnection(ctx context.Context, sel ast.SelectionSet, obj *model.ContentItemsConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, contentItemsConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ContentItemsConnection")
+		case "edges":
+			out.Values[i] = ec._ContentItemsConnection_edges(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._ContentItemsConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var contentItemsPageInfoImplementors = []string{"ContentItemsPageInfo"}
+
+func (ec *executionContext) _ContentItemsPageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.ContentItemsPageInfo) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, contentItemsPageInfoImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ContentItemsPageInfo")
+		case "hasPreviousPage":
+			out.Values[i] = ec._ContentItemsPageInfo_hasPreviousPage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "hasNextPage":
+			out.Values[i] = ec._ContentItemsPageInfo_hasNextPage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "startCursor":
+			out.Values[i] = ec._ContentItemsPageInfo_startCursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "endCursor":
+			out.Values[i] = ec._ContentItemsPageInfo_endCursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7308,6 +7808,85 @@ func (ec *executionContext) marshalNContentItem2ᚖgithubᚗcomᚋwellᚑinforme
 	return ec._ContentItem(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNContentItemEdge2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemEdge(ctx context.Context, sel ast.SelectionSet, v model.ContentItemEdge) graphql.Marshaler {
+	return ec._ContentItemEdge(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNContentItemEdge2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ContentItemEdge) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNContentItemEdge2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemEdge(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalNContentItemEdge2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemEdge(ctx context.Context, sel ast.SelectionSet, v *model.ContentItemEdge) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._ContentItemEdge(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNContentItemsConnection2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsConnection(ctx context.Context, sel ast.SelectionSet, v model.ContentItemsConnection) graphql.Marshaler {
+	return ec._ContentItemsConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNContentItemsConnection2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsConnection(ctx context.Context, sel ast.SelectionSet, v *model.ContentItemsConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._ContentItemsConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNContentItemsPageInfo2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsPageInfo(ctx context.Context, sel ast.SelectionSet, v model.ContentItemsPageInfo) graphql.Marshaler {
+	return ec._ContentItemsPageInfo(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNContentItemsPageInfo2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsPageInfo(ctx context.Context, sel ast.SelectionSet, v *model.ContentItemsPageInfo) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._ContentItemsPageInfo(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNDeleteResponse2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐDeleteResponse(ctx context.Context, sel ast.SelectionSet, v model.DeleteResponse) graphql.Marshaler {
 	return ec._DeleteResponse(ctx, sel, &v)
 }
@@ -7972,6 +8551,18 @@ func (ec *executionContext) unmarshalOContentItemInteractionsInput2ᚖgithubᚗc
 		return nil, nil
 	}
 	res, err := ec.unmarshalOContentItemInteractionsInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemInteractionsInput(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) unmarshalOContentItemsConnectionInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsConnectionInput(ctx context.Context, v interface{}) (model.ContentItemsConnectionInput, error) {
+	return ec.unmarshalInputContentItemsConnectionInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOContentItemsConnectionInput2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsConnectionInput(ctx context.Context, v interface{}) (*model.ContentItemsConnectionInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOContentItemsConnectionInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐContentItemsConnectionInput(ctx, v)
 	return &res, err
 }
 

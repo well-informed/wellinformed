@@ -82,8 +82,7 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 	return &feed, err
 }
 
-func buildPage(first int, after *string, edges []*model.SrcRSSFeedEdge) (*model.SrcRSSFeedsConnection, error) {
-	log.Debugf("how many edges before prune? %d", len(edges))
+func buildSrcRSSFeedsPage(first int, after *string, edges []*model.SrcRSSFeedEdge) (*model.SrcRSSFeedsConnection, error) {
 	if after != nil {
 		for i := 0; i < len(edges); i++ {
 			if *after == edges[i].Cursor {
@@ -100,7 +99,6 @@ func buildPage(first int, after *string, edges []*model.SrcRSSFeedEdge) (*model.
 	} else if first < len(edges) {
 		edges = edges[:first]
 	}
-	log.Debugf("how many edges after prune? %d", len(edges))
 	info := &model.SrcRSSFeedsPageInfo{
 		HasPreviousPage: len(edges) > 0 && after != nil,
 		HasNextPage:     len(edges) > first,
@@ -118,7 +116,7 @@ func feedsToEdges(feeds []*model.SrcRSSFeed) []*model.SrcRSSFeedEdge {
 	for _, feed := range feeds {
 		edges = append(edges, &model.SrcRSSFeedEdge{
 			Node:   feed,
-			Cursor: b64.StdEncoding.EncodeToString([]byte(feed.Updated.String())),
+			Cursor: b64.StdEncoding.EncodeToString([]byte(string(feed.ID))),
 		})
 	}
 	return edges
@@ -139,7 +137,7 @@ func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.SrcRSSFeedsCon
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return buildSrcRSSFeedsPage(input.First, input.After, edges)
 }
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
@@ -154,7 +152,7 @@ func (db DB) PageSrcRSSFeeds(input *model.SrcRSSFeedsConnectionInput) (*model.Sr
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return buildSrcRSSFeedsPage(input.First, input.After, edges)
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
