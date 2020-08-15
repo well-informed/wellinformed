@@ -153,7 +153,7 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	return feed, nil
 }
 
-func (r *queryResolver) Sources(ctx context.Context, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+func (r *queryResolver) Sources(ctx context.Context, input *model.ConnectionInput) (*model.Connection, error) {
 	sources, err := r.DB.PageSrcRSSFeeds(input)
 	if err != nil {
 		return nil, err
@@ -235,7 +235,7 @@ func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.Preference
 	return r.DB.ListPreferenceSetsByUser(user.ID)
 }
 
-func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ContentItemsConnectionInput) (*model.ContentItemsConnection, error) {
+func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ConnectionInput) (*model.Connection, error) {
 	log.Debug("resolving ContentItems")
 	contentItems, err := r.DB.PageContentItemsBySource(obj, input)
 	if err != nil {
@@ -263,7 +263,7 @@ func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFe
 	return r.Query().UserFeed(ctx)
 }
 
-func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.ConnectionInput) (*model.Connection, error) {
 	return r.DB.PageSrcRSSFeedsByUser(obj, input)
 }
 
@@ -283,21 +283,13 @@ func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*m
 	return r.DB.ListUserSubscriptions(user.ID)
 }
 
-func (r *userResolver) Interactions(ctx context.Context, obj *model.User, input *model.UserInteractionInput) ([]*model.Interaction, error) {
-	var interactionInput *model.ReadState
+func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readState *model.ReadState, input model.ConnectionInput) (*model.Connection, error) {
 	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting Interactions for a user: %v", err)
-		return nil, errors.New("You are not signed in!")
+		return nil, errors.New("unauthorized request")
 	}
-
-	if input == nil {
-		interactionInput = nil
-	} else {
-		interactionInput = input.ReadState
-	}
-
-	return r.DB.ListUserInteractions(obj.ID, interactionInput)
+	return r.DB.PageUserInteractions(obj.ID, readState, &input)
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {

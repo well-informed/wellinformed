@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	b64 "encoding/base64"
 	"errors"
 
 	log "github.com/sirupsen/logrus"
@@ -82,44 +81,15 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 	return &feed, err
 }
 
-func buildSrcRSSFeedsPage(first int, after *string, edges []*model.SrcRSSFeedEdge) (*model.SrcRSSFeedsConnection, error) {
-	if after != nil {
-		for i := 0; i < len(edges); i++ {
-			if *after == edges[i].Cursor {
-				if i+1 == len(edges) {
-					return nil, errors.New("cursor not found in list")
-				} else if i+first+1 > len(edges) {
-					edges = edges[i+1:]
-				} else {
-					edges = edges[i+1 : i+first+1]
-				}
-				break
-			}
-		}
-	} else if first < len(edges) {
-		edges = edges[:first]
-	}
-	info := &model.SrcRSSFeedsPageInfo{
-		HasPreviousPage: len(edges) > 0 && after != nil,
-		HasNextPage:     len(edges) > first,
-		StartCursor:     edges[0].Cursor,
-		EndCursor:       edges[len(edges)-1].Cursor,
-	}
-	return &model.SrcRSSFeedsConnection{
-		Edges:    edges,
-		PageInfo: info,
-	}, nil
-}
-
-func feedsToEdges(feeds []*model.SrcRSSFeed) []*model.SrcRSSFeedEdge {
-	edges := make([]*model.SrcRSSFeedEdge, 0)
+func feedsToNodes(feeds []*model.SrcRSSFeed) []*model.Node {
+	nodes := make([]*model.Node, 0)
 	for _, feed := range feeds {
-		edges = append(edges, &model.SrcRSSFeedEdge{
-			Node:   feed,
-			Cursor: b64.StdEncoding.EncodeToString([]byte(string(feed.ID))),
+		nodes = append(nodes, &model.Node{
+			Value: feed,
+			ID:    feed.ID,
 		})
 	}
-	return edges
+	return nodes
 }
 
 //Need to write this manually now...in order to select only the fields from the first table
@@ -131,13 +101,13 @@ ON src_rss_feeds.id = user_subscriptions.source_id
 WHERE user_subscriptions.user_id = $1 
 ORDER BY src_rss_feeds.id`
 
-func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.ConnectionInput) (*model.Connection, error) {
 	feeds, err := db.listSrcRSSFeedsByQuery(feedsByUserStmt, user.ID)
-	edges := feedsToEdges(feeds)
+	edges := nodesToEdges(feedsToNodes(feeds))
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildSrcRSSFeedsPage(input.First, input.After, edges)
+	return buildPage(input.First, input.After, edges)
 }
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
@@ -146,13 +116,13 @@ func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error
 
 const allFeedsStmt = `SELECT * FROM src_rss_feeds ORDER BY id`
 
-func (db DB) PageSrcRSSFeeds(input *model.SrcRSSFeedsConnectionInput) (*model.SrcRSSFeedsConnection, error) {
+func (db DB) PageSrcRSSFeeds(input *model.ConnectionInput) (*model.Connection, error) {
 	feeds, err := db.listSrcRSSFeedsByQuery(allFeedsStmt)
-	edges := feedsToEdges(feeds)
+	edges := nodesToEdges(feedsToNodes(feeds))
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildSrcRSSFeedsPage(input.First, input.After, edges)
+	return buildPage(input.First, input.After, edges)
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {

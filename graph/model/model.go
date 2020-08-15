@@ -14,6 +14,8 @@ type SrcRSSFeed struct {
 	Generator     *string   `json:"generator"`
 }
 
+func (s *SrcRSSFeed) IsPageable() {}
+
 type User struct {
 	ID                      int64     `json:"id"`
 	Firstname               string    `json:"firstname"`
@@ -32,6 +34,8 @@ type UserSubscription struct {
 	SrcRSSFeedID int64     `json:"srcRSSFeed" db:"source_id"`
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
+
+func (u *UserSubscription) IsPageable() {}
 
 type PreferenceSet struct {
 	ID        int64      `json:"id"`
@@ -60,6 +64,8 @@ type ContentItem struct {
 	SourceType  string     `json:"sourceType" db:"source_type"`
 }
 
+func (c *ContentItem) IsPageable() {}
+
 type Interaction struct {
 	ID            int64     `json:"id"`
 	UserID        int64     `json:"user" db:"user_id"`
@@ -69,3 +75,5 @@ type Interaction struct {
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
 }
+
+func (i *Interaction) IsPageable() {}

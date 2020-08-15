@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+type Pageable interface {
+	IsPageable()
+}
+
 type AuthResponse struct {
 	AuthToken *AuthToken `json:"authToken"`
 	User      *User      `json:"user"`
@@ -19,34 +23,27 @@ type AuthToken struct {
 	ExpiredAt   time.Time `json:"expiredAt"`
 }
 
-type ContentItemEdge struct {
-	Node   *ContentItem `json:"node"`
-	Cursor string       `json:"cursor"`
+type Connection struct {
+	Edges    []*Edge   `json:"edges"`
+	PageInfo *PageInfo `json:"pageInfo"`
+}
+
+type ConnectionInput struct {
+	First int     `json:"first"`
+	After *string `json:"after"`
 }
 
 type ContentItemInteractionsInput struct {
 	UserID *int64 `json:"userID"`
 }
 
-type ContentItemsConnection struct {
-	Edges    []*ContentItemEdge    `json:"edges"`
-	PageInfo *ContentItemsPageInfo `json:"pageInfo"`
-}
-
-type ContentItemsConnectionInput struct {
-	First int     `json:"first"`
-	After *string `json:"after"`
-}
-
-type ContentItemsPageInfo struct {
-	HasPreviousPage bool   `json:"hasPreviousPage"`
-	HasNextPage     bool   `json:"hasNextPage"`
-	StartCursor     string `json:"startCursor"`
-	EndCursor       string `json:"endCursor"`
-}
-
 type DeleteResponse struct {
 	Ok bool `json:"ok"`
+}
+
+type Edge struct {
+	Node   *Node  `json:"node"`
+	Cursor string `json:"cursor"`
 }
 
 type GetUserInput struct {
@@ -64,6 +61,18 @@ type InteractionInput struct {
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type Node struct {
+	Value Pageable `json:"value"`
+	ID    int64    `json:"id"`
+}
+
+type PageInfo struct {
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	HasNextPage     bool   `json:"hasNextPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
 }
 
 type PreferenceSetInput struct {
@@ -85,42 +94,16 @@ type RegisterInput struct {
 	Lastname        string `json:"lastname"`
 }
 
-type SrcRSSFeedEdge struct {
-	Node   *SrcRSSFeed `json:"node"`
-	Cursor string      `json:"cursor"`
-}
-
 type SrcRSSFeedInput struct {
 	ID       *int64  `json:"id"`
 	Link     *string `json:"link"`
 	FeedLink *string `json:"feedLink"`
 }
 
-type SrcRSSFeedsConnection struct {
-	Edges    []*SrcRSSFeedEdge    `json:"edges"`
-	PageInfo *SrcRSSFeedsPageInfo `json:"pageInfo"`
-}
-
-type SrcRSSFeedsConnectionInput struct {
-	First int     `json:"first"`
-	After *string `json:"after"`
-}
-
-type SrcRSSFeedsPageInfo struct {
-	HasPreviousPage bool   `json:"hasPreviousPage"`
-	HasNextPage     bool   `json:"hasNextPage"`
-	StartCursor     string `json:"startCursor"`
-	EndCursor       string `json:"endCursor"`
-}
-
 type UserFeed struct {
 	UserID       int64          `json:"userID"`
 	Name         string         `json:"name"`
 	ContentItems []*ContentItem `json:"contentItems"`
-}
-
-type UserInteractionInput struct {
-	ReadState *ReadState `json:"readState"`
 }
 
 type ReadState string

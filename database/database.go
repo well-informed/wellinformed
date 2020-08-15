@@ -1,12 +1,15 @@
 package database
 
 import (
+	b64 "encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed"
+	"github.com/well-informed/wellinformed/graph/model"
 )
 
 type DB struct {
@@ -42,54 +45,42 @@ func createTable(db *sqlx.DB, name string, stmt string) {
 	}
 }
 
-// func createUserHistoryTable(db *sql.DB) {
-// 	stmt := `
-// 	CREATE TABLE IF NOT EXISTS user_history
-// 	( userID varchar,
-// 		parent_feed varchar,
-// 		guid varchar,
-// 		trustworthiness smallint,
-// 		insightfulness smallint,
-// 		entertainment smallint,
-// 		importance smallint,
-// 		overall smallint,
-// 		notes text,
-// 		FOREIGN KEY (userID) REFERENCES users(userID),
-// 		FOREIGN KEY (parent_feed, guid) REFERENCES main_feed(parent_feed, guid),
-// 		PRIMARY KEY (userID, parent_feed, guid)
-// 		)`
-// 	_, err := db.Exec(stmt)
-// 	if err != nil {
-// 		log.Fatal("error creating history table. err: ", err)
-// 	}
-// }
+func buildPage(first int, after *string, edges []*model.Edge) (*model.Connection, error) {
+	if after != nil {
+		for i := 0; i < len(edges); i++ {
+			if *after == edges[i].Cursor {
+				if i+1 == len(edges) {
+					return nil, errors.New("cursor not found in list")
+				} else if i+first+1 > len(edges) {
+					edges = edges[i+1:]
+				} else {
+					edges = edges[i+1 : i+first+1]
+				}
+				break
+			}
+		}
+	} else if first < len(edges) {
+		edges = edges[:first]
+	}
+	info := &model.PageInfo{
+		HasPreviousPage: len(edges) > 0 && after != nil,
+		HasNextPage:     len(edges) > first,
+		StartCursor:     edges[0].Cursor,
+		EndCursor:       edges[len(edges)-1].Cursor,
+	}
+	return &model.Connection{
+		Edges:    edges,
+		PageInfo: info,
+	}, nil
+}
 
-// func createUserPrefSetTable(db *sql.DB) {
-// 	stmt := `
-// 	CREATE TABLE IF NOT EXISTS preference_sets
-// 	( userID varchar,
-// 		pref_set_name varchar,
-// 		FOREIGN KEY (userID) REFERENCES users(userID),
-// 		PRIMARY KEY (userID, pref_set_name)
-// 	)`
-// 	_, err := db.Exec(stmt)
-// 	if err != nil {
-// 		log.Fatal("error creating preference_sets table. err: ", err)
-// 	}
-// }
-
-// func createUserSourcesTable(db *sql.DB) {
-// 	stmt := `
-// 	CREATE TABLE IF NOT EXISTS user_sources
-// 	( userID varchar,
-// 		pref_set_name varchar,
-// 		source varchar,
-// 		FOREIGN KEY (userID, pref_set_name) REFERENCES preference_sets(userID, pref_set_name),
-// 		FOREIGN KEY (source) REFERENCES src_rss_feeds(link)
-// 		PRIMARY KEY (userID, pref_set_name, source)
-// 	)`
-// 	_, err := db.Exec(stmt)
-// 	if err != nil {
-// 		log.Fatal("error creating user_sources table. err: ", err)
-// 	}
-// }
+func nodesToEdges(nodes []*model.Node) []*model.Edge {
+	edges := make([]*model.Edge, 0)
+	for _, node := range nodes {
+		edges = append(edges, &model.Edge{
+			Node:   node,
+			Cursor: b64.StdEncoding.EncodeToString([]byte(string(node.ID))),
+		})
+	}
+	return edges
+}

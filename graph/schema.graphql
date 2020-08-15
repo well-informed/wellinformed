@@ -10,28 +10,6 @@ type AuthResponse {
   user: User!
 }
 
-input SrcRSSFeedsConnectionInput {
-  first: Int!
-  after: String
-}
-
-type SrcRSSFeedsConnection {
-  edges: [SrcRSSFeedEdge!]!
-  pageInfo: SrcRSSFeedsPageInfo!
-}
-
-type SrcRSSFeedEdge {
-  node: SrcRSSFeed!
-  cursor: String!
-}
-
-type SrcRSSFeedsPageInfo {
-  hasPreviousPage: Boolean!
-  hasNextPage: Boolean!
-  startCursor: String!
-  endCursor: String!
-}
-
 type SrcRSSFeed {
   id: ID!
   title: String!
@@ -42,30 +20,8 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
+  contentItems(input: ConnectionInput): Connection!
   isSubscribed: Boolean!
-}
-
-input ContentItemsConnectionInput {
-  first: Int!
-  after: String
-}
-
-type ContentItemsConnection {
-  edges: [ContentItemEdge!]!
-  pageInfo: ContentItemsPageInfo!
-}
-
-type ContentItemEdge {
-  node: ContentItem!
-  cursor: String!
-}
-
-type ContentItemsPageInfo {
-  hasPreviousPage: Boolean!
-  hasNextPage: Boolean!
-  startCursor: String!
-  endCursor: String!
 }
 
 input ContentItemInteractionsInput {
@@ -91,28 +47,6 @@ type ContentItem {
   interaction(input: ContentItemInteractionsInput): Interaction
 }
 
-# input UserSubscriptionsConnectionInput {
-#   first: Int!
-#   after: String
-# }
-
-# type UserSubscriptionsConnection {
-#   edges: [UserSubscriptionEdge!]!
-#   pageInfo: UserSubscriptionsPageInfo!
-# }
-
-# type UserSubscriptionEdge {
-#   node: UserSubscription!
-#   cursor: String!
-# }
-
-# type UserSubscriptionsPageInfo {
-#   hasPreviousPage: Boolean!
-#   hasNextPage: Boolean!
-#   startCursor: String!
-#   endCursor: String!
-# }
-
 type UserSubscription {
   id: ID!
   user: User!
@@ -123,36 +57,38 @@ type UserSubscription {
 type UserFeed {
   userID: ID!
   name: String!
-  # contentItems(input: ContentItemsConnectionInput): ContentItemsConnection!
+  # contentItems(input: ConnectionInput): Connection!
   contentItems: [ContentItem!]!
 }
 
-input UserInteractionInput {
-  readState: ReadState
+input ConnectionInput {
+  first: Int!
+  after: String
+
+}
+type Connection {
+  edges: [Edge!]!
+  pageInfo: PageInfo!
 }
 
-# input UserInteractionsConnectionInput {
-#   first: Int!
-#   after: String
-#   readState: ReadState
-# }
+type PageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
 
-# type UserInteractionsConnection {
-#   edges: [UserInteractionEdge!]!
-#   pageInfo: UserInteractionsPageInfo!
-# }
+type Edge {
+  node: Node!
+  cursor: String!
+}
 
-# type UserInteractionEdge {
-#   node: Interaction!
-#   cursor: String!
-# }
+type Node {
+  value: Pageable!
+  id: ID!
+}
 
-# type UserInteractionsPageInfo {
-#   hasPreviousPage: Boolean!
-#   hasNextPage: Boolean!
-#   startCursor: String!
-#   endCursor: String!
-# }
+union Pageable = Interaction | SrcRSSFeed | UserSubscription | ContentItem
 
 type User {
   id: ID!
@@ -162,15 +98,14 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
-  srcRSSFeeds(input: SrcRSSFeedsConnectionInput): SrcRSSFeedsConnection!
+  srcRSSFeeds(input: ConnectionInput): Connection!
   preferenceSets: [PreferenceSet!]!
   activePreferenceSet: PreferenceSet!
   createdAt: Time!
   updatedAt: Time!
-  # subscriptions(input: UserSubscriptionsConnectionInput): UserSubscriptionsConnection!
+  # subscriptions(input: ConnectionInput): Connection!
   subscriptions: [UserSubscription!]!
-  # interactions(input: UserInteractionsConnectionInput): UserInteractionsConnection
-  interactions(input: UserInteractionInput): [Interaction!]!
+  interactions(readState: ReadState, input: ConnectionInput!): Connection!
 }
 
 type PreferenceSet {
@@ -251,7 +186,7 @@ input GetUserInput {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
-  sources(input: SrcRSSFeedsConnectionInput): SrcRSSFeedsConnection!
+  sources(input: ConnectionInput): Connection!
   userFeed: UserFeed!
   me: User!
   user(input: GetUserInput): User!
