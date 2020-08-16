@@ -105,11 +105,10 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 
 func (db DB) PageContentItemsBySource(src *model.SrcRSSFeed, input *model.ConnectionInput) (*model.Connection, error) {
 	items, err := db.listContentItemsByQuery(itemsByFeedStmt, src.ID)
-	edges := nodesToEdges(itemsToNodes(items))
 	if err != nil {
 		log.Error("error selecting base content_items by source_rss_feed. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return buildPage(input.First, input.After, items)
 }
 
 func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model.ContentItem, error) {

@@ -113,11 +113,6 @@ type ComplexityRoot struct {
 		SavePreferenceSet  func(childComplexity int, input model.PreferenceSetInput) int
 	}
 
-	Node struct {
-		ID    func(childComplexity int) int
-		Value func(childComplexity int) int
-	}
-
 	PageInfo struct {
 		EndCursor       func(childComplexity int) int
 		HasNextPage     func(childComplexity int) int
@@ -554,20 +549,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SavePreferenceSet(childComplexity, args["input"].(model.PreferenceSetInput)), true
-
-	case "Node.id":
-		if e.complexity.Node.ID == nil {
-			break
-		}
-
-		return e.complexity.Node.ID(childComplexity), true
-
-	case "Node.value":
-		if e.complexity.Node.Value == nil {
-			break
-		}
-
-		return e.complexity.Node.Value(childComplexity), true
 
 	case "PageInfo.endCursor":
 		if e.complexity.PageInfo.EndCursor == nil {
@@ -1115,13 +1096,8 @@ type PageInfo {
 }
 
 type Edge {
-  node: Node!
+  node: Pageable!
   cursor: String!
-}
-
-type Node {
-  value: Pageable!
-  id: ID!
 }
 
 union Pageable = Interaction | SrcRSSFeed | UserSubscription | ContentItem
@@ -2329,9 +2305,9 @@ func (ec *executionContext) _Edge_node(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Node)
+	res := resTmp.(model.Pageable)
 	fc.Result = res
-	return ec.marshalNNode2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐNode(ctx, field.Selections, res)
+	return ec.marshalNPageable2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPageable(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Edge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.Edge) (ret graphql.Marshaler) {
@@ -2850,74 +2826,6 @@ func (ec *executionContext) _Mutation_savePreferenceSet(ctx context.Context, fie
 	res := resTmp.(*model.PreferenceSet)
 	fc.Result = res
 	return ec.marshalNPreferenceSet2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPreferenceSet(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Node_value(ctx context.Context, field graphql.CollectedField, obj *model.Node) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Node",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Value, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(model.Pageable)
-	fc.Result = res
-	return ec.marshalNPageable2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPageable(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Node_id(ctx context.Context, field graphql.CollectedField, obj *model.Node) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Node",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int64)
-	fc.Result = res
-	return ec.marshalNID2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _PageInfo_hasPreviousPage(ctx context.Context, field graphql.CollectedField, obj *model.PageInfo) (ret graphql.Marshaler) {
@@ -6482,38 +6390,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
-var nodeImplementors = []string{"Node"}
-
-func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj *model.Node) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, nodeImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Node")
-		case "value":
-			out.Values[i] = ec._Node_value(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "id":
-			out.Values[i] = ec._Node_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var pageInfoImplementors = []string{"PageInfo"}
 
 func (ec *executionContext) _PageInfo(ctx context.Context, sel ast.SelectionSet, obj *model.PageInfo) graphql.Marshaler {
@@ -7576,20 +7452,6 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 
 func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐLoginInput(ctx context.Context, v interface{}) (model.LoginInput, error) {
 	return ec.unmarshalInputLoginInput(ctx, v)
-}
-
-func (ec *executionContext) marshalNNode2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐNode(ctx context.Context, sel ast.SelectionSet, v model.Node) graphql.Marshaler {
-	return ec._Node(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNNode2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐNode(ctx context.Context, sel ast.SelectionSet, v *model.Node) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._Node(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNPageInfo2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v model.PageInfo) graphql.Marshaler {

@@ -78,13 +78,8 @@ type PageInfo {
 }
 
 type Edge {
-  node: Node!
+  node: Pageable!
   cursor: String!
-}
-
-type Node {
-  value: Pageable!
-  id: ID!
 }
 
 union Pageable = Interaction | SrcRSSFeed | UserSubscription | ContentItem

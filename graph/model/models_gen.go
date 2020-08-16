@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-type Pageable interface {
-	IsPageable()
-}
-
 type AuthResponse struct {
 	AuthToken *AuthToken `json:"authToken"`
 	User      *User      `json:"user"`
@@ -42,8 +38,8 @@ type DeleteResponse struct {
 }
 
 type Edge struct {
-	Node   *Node  `json:"node"`
-	Cursor string `json:"cursor"`
+	Node   Pageable `json:"node"`
+	Cursor string   `json:"cursor"`
 }
 
 type GetUserInput struct {
@@ -61,11 +57,6 @@ type InteractionInput struct {
 type LoginInput struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-}
-
-type Node struct {
-	Value Pageable `json:"value"`
-	ID    int64    `json:"id"`
 }
 
 type PageInfo struct {

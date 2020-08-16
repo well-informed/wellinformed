@@ -2,6 +2,10 @@ package model
 
 import "time"
 
+type Pageable interface {
+	GetID() string
+}
+
 type SrcRSSFeed struct {
 	ID            int64     `json:"id"`
 	Title         string    `json:"title"`
@@ -14,7 +18,9 @@ type SrcRSSFeed struct {
 	Generator     *string   `json:"generator"`
 }
 
-func (s *SrcRSSFeed) IsPageable() {}
+func (src *SrcRSSFeed) GetID() string {
+	return string(src.ID)
+}
 
 type User struct {
 	ID                      int64     `json:"id"`
@@ -35,7 +41,9 @@ type UserSubscription struct {
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
 
-func (u *UserSubscription) IsPageable() {}
+func (u *UserSubscription) GetID() string {
+	return string(u.ID)
+}
 
 type PreferenceSet struct {
 	ID        int64      `json:"id"`
@@ -64,7 +72,9 @@ type ContentItem struct {
 	SourceType  string     `json:"sourceType" db:"source_type"`
 }
 
-func (c *ContentItem) IsPageable() {}
+func (c *ContentItem) GetID() string {
+	return string(c.ID)
+}
 
 type Interaction struct {
 	ID            int64     `json:"id"`
@@ -76,4 +86,6 @@ type Interaction struct {
 	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
 }
 
-func (i *Interaction) IsPageable() {}
+func (i *Interaction) GetID() string {
+	return string(i.ID)
+}
