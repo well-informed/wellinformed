@@ -43,7 +43,7 @@ func nodesToEdges(nodes []*model.Pageable) []*model.Edge {
 		value := *node
 		edges = append(edges, &model.Edge{
 			Node:   value,
-			Cursor: b64.StdEncoding.EncodeToString([]byte(string(value.GetID()))),
+			Cursor: b64.StdEncoding.EncodeToString([]byte(value.GetID())),
 		})
 	}
 	return edges
