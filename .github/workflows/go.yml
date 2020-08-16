@@ -6,7 +6,7 @@ on:
 
 jobs:
 
-  build:
+  build-test:
     name: Build
     runs-on: ubuntu-18.04
     steps:
@@ -31,4 +31,7 @@ jobs:
       run: make build-prod
 
     - name: Test
-      run: make test
+      run: |
+        make up
+        make test
+        make down
