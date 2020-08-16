@@ -98,7 +98,7 @@ const feedsByUserStmt = `SELECT src_rss_feeds.*
 FROM src_rss_feeds
 INNER JOIN user_subscriptions
 ON src_rss_feeds.id = user_subscriptions.source_id
-WHERE user_subscriptions.user_id = $1 
+WHERE user_subscriptions.user_id = $1
 ORDER BY src_rss_feeds.id`
 
 func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.ConnectionInput) (*model.Connection, error) {
@@ -118,11 +118,14 @@ const allFeedsStmt = `SELECT * FROM src_rss_feeds ORDER BY id`
 
 func (db DB) PageSrcRSSFeeds(input *model.ConnectionInput) (*model.Connection, error) {
 	feeds, err := db.listSrcRSSFeedsByQuery(allFeedsStmt)
-	edges := nodesToEdges(feedsToNodes(feeds))
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	nodes := make([]*model.Pageable, len(feeds))
+	for i, v := range nodes {
+		nodes[i] = v
+	}
+	return buildPage(input.First, input.After, nodes)
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
