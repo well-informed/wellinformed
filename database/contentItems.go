@@ -7,7 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
-	"github.com/well-informed/wellinformed/pagination"
+	page "github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentItem, error) {
@@ -86,17 +86,6 @@ func (db DB) GetContentItem(id int64) (*model.ContentItem, error) {
 	return &contentItem, nil
 }
 
-func itemsToNodes(items []*model.ContentItem) []*model.Node {
-	nodes := make([]*model.Node, 0)
-	for _, item := range items {
-		nodes = append(nodes, &model.Node{
-			Value: item,
-			ID:    item.ID,
-		})
-	}
-	return nodes
-}
-
 const itemsByFeedStmt = `SELECT * FROM content_items WHERE source_id = $1 ORDER BY published DESC`
 
 func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
@@ -109,7 +98,7 @@ func (db DB) PageContentItemsBySource(src *model.SrcRSSFeed, input *model.Connec
 	if err != nil {
 		log.Error("error selecting base content_items by source_rss_feed. err: ", err)
 	}
-	return pagination.BuildPage(input.First, input.After, itemsToNodes(items))
+	return page.BuildPage(input.First, input.After, page.ContentItemsToNodes(items))
 }
 
 func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model.ContentItem, error) {

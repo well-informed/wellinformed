@@ -7,6 +7,8 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
+//go:generate go run generator/pageables_generator.go
+
 func BuildPage(first int, after *string, nodes []*model.Node) (*model.Connection, error) {
 	edges := nodesToEdges(nodes)
 	if after != nil {

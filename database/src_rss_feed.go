@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
-	"github.com/well-informed/wellinformed/pagination"
+	page "github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) {
@@ -82,17 +82,6 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 	return &feed, err
 }
 
-func feedsToNodes(feeds []*model.SrcRSSFeed) []*model.Node {
-	nodes := make([]*model.Node, 0)
-	for _, feed := range feeds {
-		nodes = append(nodes, &model.Node{
-			Value: feed,
-			ID:    feed.ID,
-		})
-	}
-	return nodes
-}
-
 //Need to write this manually now...in order to select only the fields from the first table
 //Maybe there's a way to only select some fields?
 const feedsByUserStmt = `SELECT src_rss_feeds.*
@@ -107,7 +96,7 @@ func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.ConnectionInpu
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return pagination.BuildPage(input.First, input.After, feedsToNodes(feeds))
+	return page.BuildPage(input.First, input.After, page.SrcRSSFeedsToNodes(feeds))
 }
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
@@ -121,7 +110,7 @@ func (db DB) PageSrcRSSFeeds(input *model.ConnectionInput) (*model.Connection, e
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return pagination.BuildPage(input.First, input.After, feedsToNodes(feeds))
+	return page.BuildPage(input.First, input.After, page.SrcRSSFeedsToNodes(feeds))
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
