@@ -7,7 +7,7 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
-func buildPage(first int, after *string, nodes []*model.Pageable) (*model.Connection, error) {
+func buildPage(first int, after *string, nodes model.Pageable) (*model.Connection, error) {
 	edges := nodesToEdges(nodes)
 	if after != nil {
 		for i := 0; i < len(edges); i++ {
@@ -37,14 +37,15 @@ func buildPage(first int, after *string, nodes []*model.Pageable) (*model.Connec
 	}, nil
 }
 
-func nodesToEdges(nodes []*model.Pageable) []*model.Edge {
+func nodesToEdges(nodes model.Pageable) []*model.Edge {
 	edges := make([]*model.Edge, 0)
-	for _, node := range nodes {
-		value := *node
+
+	for i, v := range nodes {
 		edges = append(edges, &model.Edge{
 			Node:   value,
 			Cursor: b64.StdEncoding.EncodeToString([]byte(value.GetID())),
 		})
 	}
+
 	return edges
 }

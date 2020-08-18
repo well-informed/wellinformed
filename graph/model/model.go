@@ -3,7 +3,9 @@ package model
 import "time"
 
 type Pageable interface {
-	GetID() string
+	IsPageable()
+	GetID(i int) string
+	Len() int
 }
 
 type SrcRSSFeed struct {
@@ -22,6 +24,20 @@ func (src *SrcRSSFeed) GetID() string {
 	return string(src.ID)
 }
 
+func (src *SrcRSSFeed) IsPageable()
+
+type SrcRSSFeeds []SrcRSSFeed
+
+func (srcs SrcRSSFeeds) IsPageable()
+
+func (srcs SrcRSSFeeds) GetID(i int) string {
+	return string(srcs[i].ID)
+}
+
+func (srcs SrcRSSFeeds) Len() int {
+	return len(srcs)
+}
+
 type User struct {
 	ID                      int64     `json:"id"`
 	Firstname               string    `json:"firstname"`
@@ -31,7 +47,7 @@ type User struct {
 	Password                string    `json:"password"`
 	ActivePreferenceSetName string    `json:"activePreferenceSet"`
 	CreatedAt               time.Time `json:"createdAt"`
-	UpdatedAt               time.Time `json:"updatedAt"`
+	UpdatedAt               time.Time `json:"updatedAt"`3
 }
 
 type UserSubscription struct {
@@ -44,6 +60,8 @@ type UserSubscription struct {
 func (u *UserSubscription) GetID() string {
 	return string(u.ID)
 }
+
+func (u *UserSubscription) IsPageable()
 
 type PreferenceSet struct {
 	ID        int64      `json:"id"`
@@ -76,6 +94,8 @@ func (c *ContentItem) GetID() string {
 	return string(c.ID)
 }
 
+func (c *ContentItem) IsPageable()
+
 type Interaction struct {
 	ID            int64     `json:"id"`
 	UserID        int64     `json:"user" db:"user_id"`
@@ -89,3 +109,5 @@ type Interaction struct {
 func (i *Interaction) GetID() string {
 	return string(i.ID)
 }
+
+func (i *Interaction) IsPageable()

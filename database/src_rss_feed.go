@@ -107,7 +107,7 @@ func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.ConnectionInpu
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return buildPage(input.First, input.After, feeds)
 }
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
@@ -121,11 +121,10 @@ func (db DB) PageSrcRSSFeeds(input *model.ConnectionInput) (*model.Connection, e
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	nodes := make([]*model.Pageable, len(feeds))
-	for i, v := range nodes {
-		nodes[i] = v
-	}
-	return buildPage(input.First, input.After, nodes)
+	var node model.Pageable
+	node = feeds[0]
+	// nodes := make([]*model.Pageable, len(feeds))
+	return buildPage(input.First, input.After, []model.Pageable{node})
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
