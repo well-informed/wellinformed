@@ -1,4 +1,4 @@
-package database
+package pagination
 
 import (
 	b64 "encoding/base64"
@@ -7,7 +7,8 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
-func buildPage(first int, after *string, edges []*model.Edge) (*model.Connection, error) {
+func BuildPage(first int, after *string, nodes []*model.Node) (*model.Connection, error) {
+	edges := nodesToEdges(nodes)
 	if after != nil {
 		for i := 0; i < len(edges); i++ {
 			if *after == edges[i].Cursor {

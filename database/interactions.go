@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
+	"github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*model.ContentItem, error) {
@@ -77,11 +78,10 @@ func (db DB) PageUserInteractions(userID int64, readState *model.ReadState, inpu
 	} else {
 		interactions, err = db.listUserInteractionsByQuery(`SELECT * FROM interactions WHERE user_id = $1 AND read_state = $2`, userID, readState)
 	}
-	edges := nodesToEdges(interactionsToNodes(interactions))
 	if err != nil {
 		log.Error("error selecting list of interactions. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return pagination.BuildPage(input.First, input.After, interactionsToNodes(interactions))
 }
 
 func (db DB) listUserInteractionsByQuery(stmt string, args ...interface{}) ([]*model.Interaction, error) {

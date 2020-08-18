@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
+	"github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subscription *model.UserSubscription, err error) {
@@ -84,5 +85,5 @@ func (db DB) PageUserSubscriptions(userID int64, input *model.ConnectionInput) (
 		log.Error("error listing subscriptions for user. err: ", err)
 		return nil, err
 	}
-	return buildPage(input.First, input.After, nodesToEdges(subsToNodes(userSubscriptions)))
+	return pagination.BuildPage(input.First, input.After, subsToNodes(userSubscriptions))
 }

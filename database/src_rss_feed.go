@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
+	"github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) {
@@ -103,11 +104,10 @@ ORDER BY src_rss_feeds.id`
 
 func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.ConnectionInput) (*model.Connection, error) {
 	feeds, err := db.listSrcRSSFeedsByQuery(feedsByUserStmt, user.ID)
-	edges := nodesToEdges(feedsToNodes(feeds))
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return pagination.BuildPage(input.First, input.After, feedsToNodes(feeds))
 }
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
@@ -118,11 +118,10 @@ const allFeedsStmt = `SELECT * FROM src_rss_feeds ORDER BY id`
 
 func (db DB) PageSrcRSSFeeds(input *model.ConnectionInput) (*model.Connection, error) {
 	feeds, err := db.listSrcRSSFeedsByQuery(allFeedsStmt)
-	edges := nodesToEdges(feedsToNodes(feeds))
 	if err != nil {
 		log.Error("error selecting base list of src_rss_feeds. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return pagination.BuildPage(input.First, input.After, feedsToNodes(feeds))
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {

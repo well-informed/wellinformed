@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
+	"github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentItem, error) {
@@ -96,7 +97,7 @@ func itemsToNodes(items []*model.ContentItem) []*model.Node {
 	return nodes
 }
 
-const itemsByFeedStmt = `SELECT * FROM content_items WHERE source_id = $1 ORDER BY id`
+const itemsByFeedStmt = `SELECT * FROM content_items WHERE source_id = $1 ORDER BY published DESC`
 
 func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("received query with src feed object: ", src)
@@ -105,11 +106,10 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 
 func (db DB) PageContentItemsBySource(src *model.SrcRSSFeed, input *model.ConnectionInput) (*model.Connection, error) {
 	items, err := db.listContentItemsByQuery(itemsByFeedStmt, src.ID)
-	edges := nodesToEdges(itemsToNodes(items))
 	if err != nil {
 		log.Error("error selecting base content_items by source_rss_feed. err: ", err)
 	}
-	return buildPage(input.First, input.After, edges)
+	return pagination.BuildPage(input.First, input.After, itemsToNodes(items))
 }
 
 func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model.ContentItem, error) {
