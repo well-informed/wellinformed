@@ -3,10 +3,14 @@ package database
 import (
 	"fmt"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	bindata "github.com/golang-migrate/migrate/v4/source/go_bindata"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed"
+	"github.com/well-informed/wellinformed/database/migrations"
 )
 
 type DB struct {
@@ -16,80 +20,35 @@ type DB struct {
 /*NewDB Creates a new handle on the database
 and creates necessary tables if they do not already exist*/
 func NewDB(conf wellinformed.Config) DB {
-	format := "host=%v  dbname=%v user=%v password=%v sslmode=disable"
-	connStr := fmt.Sprintf(format, conf.DBHost, conf.DBName, conf.DBUser, conf.DBPassword)
+	format := "postgres://%v:%v@%v:5432/%v?sslmode=disable"
+	connStr := fmt.Sprintf(format, conf.DBUser, conf.DBPassword, conf.DBHost, conf.DBName)
 	db, err := sqlx.Connect("postgres", connStr)
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
-	createTables(db, tables)
-
+	migrateSchema(connStr)
 	return DB{db}
 }
 
-/*Creates all necessary tables, either returns successfully,
-or exits the program with call to log.Fatal()*/
-func createTables(db *sqlx.DB, tables []table) {
-	for _, table := range tables {
-		createTable(db, table.name, table.sql)
-	}
-}
-
-func createTable(db *sqlx.DB, name string, stmt string) {
-	_, err := db.Exec(stmt)
+//Handles schema migration by reading binary packed sql files from migrations/bindata.go
+func migrateSchema(dbURL string) {
+	s := bindata.Resource(migrations.AssetNames(),
+		func(name string) ([]byte, error) {
+			return migrations.Asset(name)
+		})
+	d, err := bindata.WithInstance(s)
 	if err != nil {
-		log.Fatalf("error creating table %v. err: %v", name, err)
+		log.Fatal("couldn't read migration bindata. err: ", err)
+	}
+	m, err := migrate.NewWithSourceInstance("go-bindata", d, dbURL)
+	if err != nil {
+		log.Fatal("could not establish migrations source. err: ", err)
+	}
+	err = m.Up()
+	if err == migrate.ErrNoChange {
+		log.Warn("bypassing migration: ", err)
+	}
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatal("could not run migration: ", err)
 	}
 }
-
-// func createUserHistoryTable(db *sql.DB) {
-// 	stmt := `
-// 	CREATE TABLE IF NOT EXISTS user_history
-// 	( userID varchar,
-// 		parent_feed varchar,
-// 		guid varchar,
-// 		trustworthiness smallint,
-// 		insightfulness smallint,
-// 		entertainment smallint,
-// 		importance smallint,
-// 		overall smallint,
-// 		notes text,
-// 		FOREIGN KEY (userID) REFERENCES users(userID),
-// 		FOREIGN KEY (parent_feed, guid) REFERENCES main_feed(parent_feed, guid),
-// 		PRIMARY KEY (userID, parent_feed, guid)
-// 		)`
-// 	_, err := db.Exec(stmt)
-// 	if err != nil {
-// 		log.Fatal("error creating history table. err: ", err)
-// 	}
-// }
-
-// func createUserPrefSetTable(db *sql.DB) {
-// 	stmt := `
-// 	CREATE TABLE IF NOT EXISTS preference_sets
-// 	( userID varchar,
-// 		pref_set_name varchar,
-// 		FOREIGN KEY (userID) REFERENCES users(userID),
-// 		PRIMARY KEY (userID, pref_set_name)
-// 	)`
-// 	_, err := db.Exec(stmt)
-// 	if err != nil {
-// 		log.Fatal("error creating preference_sets table. err: ", err)
-// 	}
-// }
-
-// func createUserSourcesTable(db *sql.DB) {
-// 	stmt := `
-// 	CREATE TABLE IF NOT EXISTS user_sources
-// 	( userID varchar,
-// 		pref_set_name varchar,
-// 		source varchar,
-// 		FOREIGN KEY (userID, pref_set_name) REFERENCES preference_sets(userID, pref_set_name),
-// 		FOREIGN KEY (source) REFERENCES src_rss_feeds(link)
-// 		PRIMARY KEY (userID, pref_set_name, source)
-// 	)`
-// 	_, err := db.Exec(stmt)
-// 	if err != nil {
-// 		log.Fatal("error creating user_sources table. err: ", err)
-// 	}
-// }

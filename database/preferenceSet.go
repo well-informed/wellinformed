@@ -37,7 +37,7 @@ func (db DB) SavePreferenceSet(prefSet *model.PreferenceSet) (*model.PreferenceS
 		prefSet.EndDate,
 	).Scan(&ID)
 	if err != nil {
-		log.Errorf("failed to insert preference set. err: ", err)
+		log.Error("failed to insert preference set. err: ", err)
 		return prefSet, err
 	}
 	prefSet.ID = ID
@@ -48,7 +48,7 @@ func (db DB) GetPreferenceSetByID(id int64) (*model.PreferenceSet, error) {
 	var prefSet model.PreferenceSet
 	err := db.Get(&prefSet, "SELECT * FROM preference_sets WHERE id = $1", id)
 	if err != nil {
-		log.Errorf("failed to get preferenceSet by id. err: ", err)
+		log.Error("failed to get preferenceSet by id. err: ", err)
 		return nil, err
 	}
 	return &prefSet, nil
@@ -58,7 +58,7 @@ func (db DB) ListPreferenceSetsByUser(userID int64) ([]*model.PreferenceSet, err
 	prefSets := make([]*model.PreferenceSet, 0)
 	err := db.Select(&prefSets, "SELECT * FROM preference_sets WHERE user_id = $1", userID)
 	if err != nil {
-		log.Errorf("failed to select preference sets by user_id. err: ", err)
+		log.Error("failed to select preference sets by user_id. err: ", err)
 		return nil, err
 	}
 	return prefSets, nil
