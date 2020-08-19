@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    branches: [ master ]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-18.04
+    steps:
+    
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14.5
+      id: go
+    
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    
+    - name: Get dependencies
+      run: |
+        go mod download
+        go get -u github.com/go-bindata/go-bindata/...
+    
+    - name: Build
+      run: make build-prod
+    
+    - name: Save Deployment Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: deployment-artifacts
+        path: |
+          ./wellinformed
+          ./.ssh/edyn.pem
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-18.04
+    steps:
+
+    - name: Fetch Deployment Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: deployment-artifacts
+
+    - name: Stop Old Sever, Upload New Binary, Start New Server
+      env:
+        HOST: "ec2-18-225-34-205.us-east-2.compute.amazonaws.com"
+        USER: "ec2-user"
+      run: |
+        CPID=$(ssh -A -i ./.ssh/edyn.pem "$USER"@"$HOST" "ps --no-heading -C wellinformed" | awk '{ print $1 }')
+        WPID=$(ssh -A -i ./.ssh/edyn.pem "$USER"@"$HOST" "ps --no-heading  "ps -o ppid= $CPID")
+        ssh -A -i ./.ssh/edyn.pem "$USER"@"$HOST" "kill -9 $CPID $WPID"
+        RELEASE=$(date +%F_%H_%M_%S)
+        ssh -A -i ./.ssh/edyn.pem "$USER"@"$HOST" "mkdir releases/$RELEASE"
+        scp -i ~/.ssh/edyn.pem ./wellinformed  "$USER"@"$HOST":/home/ec2-user/"$RELEASE"
