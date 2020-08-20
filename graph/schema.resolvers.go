@@ -239,6 +239,7 @@ func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSS
 	log.Debug("resolving ContentItems")
 	contentItems, err := r.DB.PageContentItemsBySource(obj, input)
 	if err != nil {
+		log.Errorf("failed to page content items for src_rss_feed. err: ", err)
 		return nil, err
 	}
 	return contentItems, nil

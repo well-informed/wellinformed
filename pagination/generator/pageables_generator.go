@@ -59,7 +59,7 @@ import (
 {{print ""}}
 {{- range .Types }}
 func {{.}}sToNodes(list []*model.{{.}}) []*model.Node {
-	nodes := make([]*model.Node, len(list))
+	nodes := make([]*model.Node, 0)
 	for _, item := range list {
 		nodes = append(nodes, &model.Node{
 			Value: item,
