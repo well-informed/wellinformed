@@ -202,7 +202,7 @@ func (db DB) GetContentItemByInteraction(interactionId int64) (*model.ContentIte
 
 	err := db.Get(&contentItem, stmt, interactionId)
 	if err != nil {
-		log.Errorf("failed to select content_item. err:", err)
+		log.Error("failed to select content_item. err:", err)
 		return nil, err
 	}
 

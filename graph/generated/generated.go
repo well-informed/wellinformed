@@ -95,13 +95,15 @@ type ComplexityRoot struct {
 	}
 
 	Interaction struct {
-		ContentItem func(childComplexity int) int
-		CreatedAt   func(childComplexity int) int
-		ID          func(childComplexity int) int
-		PercentRead func(childComplexity int) int
-		ReadState   func(childComplexity int) int
-		UpdatedAt   func(childComplexity int) int
-		User        func(childComplexity int) int
+		Completed     func(childComplexity int) int
+		ContentItem   func(childComplexity int) int
+		CreatedAt     func(childComplexity int) int
+		ID            func(childComplexity int) int
+		PercentRead   func(childComplexity int) int
+		ReadState     func(childComplexity int) int
+		SavedForLater func(childComplexity int) int
+		UpdatedAt     func(childComplexity int) int
+		User          func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -434,6 +436,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Edge.Node(childComplexity), true
 
+	case "Interaction.completed":
+		if e.complexity.Interaction.Completed == nil {
+			break
+		}
+
+		return e.complexity.Interaction.Completed(childComplexity), true
+
 	case "Interaction.contentItem":
 		if e.complexity.Interaction.ContentItem == nil {
 			break
@@ -468,6 +477,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Interaction.ReadState(childComplexity), true
+
+	case "Interaction.savedForLater":
+		if e.complexity.Interaction.SavedForLater == nil {
+			break
+		}
+
+		return e.complexity.Interaction.SavedForLater(childComplexity), true
 
 	case "Interaction.updatedAt":
 		if e.complexity.Interaction.UpdatedAt == nil {
@@ -1174,7 +1190,12 @@ type Interaction {
   id: ID!
   user: User!
   contentItem: ContentItem!
+  """
+  deprecated in favor of completed and savedForLater bools
+  """
   readState: ReadState!
+  completed: Boolean!
+  savedForLater: Boolean!
   percentRead: Float!
   createdAt: Time!
   updatedAt: Time!
@@ -1190,6 +1211,8 @@ enum ReadState {
 input InteractionInput {
   contentItemID: ID!
   readState: ReadState!
+  completed: Boolean
+  savedForLater: Boolean
   percentRead: Float
 }
 
@@ -2502,6 +2525,74 @@ func (ec *executionContext) _Interaction_readState(ctx context.Context, field gr
 	res := resTmp.(model.ReadState)
 	fc.Result = res
 	return ec.marshalNReadState2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐReadState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Interaction_completed(ctx context.Context, field graphql.CollectedField, obj *model.Interaction) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Interaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Completed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Interaction_savedForLater(ctx context.Context, field graphql.CollectedField, obj *model.Interaction) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Interaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SavedForLater, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Interaction_percentRead(ctx context.Context, field graphql.CollectedField, obj *model.Interaction) (ret graphql.Marshaler) {
@@ -5913,6 +6004,18 @@ func (ec *executionContext) unmarshalInputInteractionInput(ctx context.Context, 
 			if err != nil {
 				return it, err
 			}
+		case "completed":
+			var err error
+			it.Completed, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "savedForLater":
+			var err error
+			it.SavedForLater, err = ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "percentRead":
 			var err error
 			it.PercentRead, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
@@ -6397,6 +6500,16 @@ func (ec *executionContext) _Interaction(ctx context.Context, sel ast.SelectionS
 			})
 		case "readState":
 			out.Values[i] = ec._Interaction_readState(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "completed":
+			out.Values[i] = ec._Interaction_completed(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "savedForLater":
+			out.Values[i] = ec._Interaction_savedForLater(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
