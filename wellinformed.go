@@ -14,21 +14,21 @@ type Persistor interface {
 	GetSrcRSSFeed(model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
 	ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error)
 	ListSrcRSSFeedsByUser(*model.User) ([]*model.SrcRSSFeed, error)
-	PageSrcRSSFeeds(*model.ConnectionInput) (*model.Connection, error)
-	PageSrcRSSFeedsByUser(*model.User, *model.ConnectionInput) (*model.Connection, error)
+	// PageSrcRSSFeeds(*model.ConnectionInput) (*model.Connection, error)
+	// PageSrcRSSFeedsByUser(*model.User, *model.ConnectionInput) (*model.Connection, error)
 
 	// UserSubscription Functions
 	InsertUserSubscription(user model.User, src model.SrcRSSFeed) (*model.UserSubscription, error)
 	GetUserSubscription(userID int64, srcID int64) (*model.UserSubscription, error)
 	DeleteUserSubscription(userID int64, srcID int64) (int, error)
-	PageUserSubscriptions(userID int64, input *model.ConnectionInput) (*model.Connection, error)
+	// PageUserSubscriptions(userID int64, input *model.ConnectionInput) (*model.Connection, error)
 
 	// ContentItem Functions
 	GetContentItem(id int64) (*model.ContentItem, error)
 	InsertContentItem(model.ContentItem) (*model.ContentItem, error)
 	ListContentItemsBySource(*model.SrcRSSFeed) ([]*model.ContentItem, error)
 	ServeContentItems([]*model.SrcRSSFeed, model.SortType, *time.Time, *time.Time) ([]*model.ContentItem, error)
-	PageContentItemsBySource(*model.SrcRSSFeed, *model.ConnectionInput) (*model.Connection, error)
+	// PageContentItemsBySource(*model.SrcRSSFeed, *model.ConnectionInput) (*model.Connection, error)
 
 	// User Functions
 	GetUserByEmail(email string) (*model.User, error)
@@ -45,7 +45,7 @@ type Persistor interface {
 
 	// Interaction Functions
 	SaveInteraction(userID int64, interaction *model.InteractionInput) (*model.ContentItem, error)
-	PageUserInteractions(userID int64, readState *model.ReadState, input *model.ConnectionInput) (*model.Connection, error)
+	// PageUserInteractions(userID int64, readState *model.ReadState, input *model.ConnectionInput) (*model.Connection, error)
 	GetInteractionByContentID(userID int64, contentItemID int64) (*model.Interaction, error)
 	GetUserByInteraction(interactionID int64) (*model.User, error)
 	GetContentItemByInteraction(contentItemID int64) (*model.ContentItem, error)

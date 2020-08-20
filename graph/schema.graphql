@@ -20,8 +20,18 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  contentItems(input: ConnectionInput): Connection!
+  contentItems(input: ConnectionInput): ContentItemsConnection!
   isSubscribed: Boolean!
+}
+
+type ContentItemsConnection {
+  pageInfo: PageInfo!
+  edges: [ContentItemsEdge!]
+}
+
+type ContentItemsEdge {
+  cursor: String!
+  contentItem: ContentItem!
 }
 
 input ContentItemInteractionsInput {
@@ -137,7 +147,12 @@ type Interaction {
   id: ID!
   user: User!
   contentItem: ContentItem!
+  """
+  deprecated in favor of completed and savedForLater bools
+  """
   readState: ReadState!
+  completed: Boolean!
+  savedForLater: Boolean!
   percentRead: Float!
   createdAt: Time!
   updatedAt: Time!
@@ -153,6 +168,8 @@ enum ReadState {
 input InteractionInput {
   contentItemID: ID!
   readState: ReadState!
+  completed: Boolean
+  savedForLater: Boolean
   percentRead: Float
 }
 
@@ -184,7 +201,7 @@ input GetUserInput {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
-  sources(input: ConnectionInput): Connection!
+  # sources(input: ConnectionInput): Connection!
   userFeed: UserFeed!
   me: User!
   user(input: GetUserInput): User!

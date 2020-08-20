@@ -6,11 +6,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/well-informed/wellinformed"
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
 func TestUserSQL(t *testing.T) {
-	db := NewDB()
+	db := NewDB(wellinformed.GetConfig())
 	currentTime := time.Now()
 	user := &model.User{
 		Firstname:               "JohnJacob",
@@ -40,7 +41,7 @@ func TestUserSQL(t *testing.T) {
 		t.Errorf("user: %+v", user)
 		t.Errorf("byEmail: %+v", byEmail)
 	}
-	byID, err := db.GetUserById(returnedUser.ID)
+	byID, err := db.GetUserByID(returnedUser.ID)
 	if err != nil {
 		t.Error("error getting user by id. err: ", err)
 	}

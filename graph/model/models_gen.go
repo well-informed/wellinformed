@@ -37,6 +37,16 @@ type ContentItemInteractionsInput struct {
 	UserID *int64 `json:"userID"`
 }
 
+type ContentItemsConnection struct {
+	PageInfo *PageInfo           `json:"pageInfo"`
+	Edges    []*ContentItemsEdge `json:"edges"`
+}
+
+type ContentItemsEdge struct {
+	Cursor      string       `json:"cursor"`
+	ContentItem *ContentItem `json:"contentItem"`
+}
+
 type DeleteResponse struct {
 	Ok bool `json:"ok"`
 }
@@ -55,6 +65,8 @@ type GetUserInput struct {
 type InteractionInput struct {
 	ContentItemID int64     `json:"contentItemID"`
 	ReadState     ReadState `json:"readState"`
+	Completed     *bool     `json:"completed"`
+	SavedForLater *bool     `json:"savedForLater"`
 	PercentRead   *float64  `json:"percentRead"`
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
+	"github.com/well-informed/wellinformed/pagination"
 )
 
 func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.ContentItem, input *model.ContentItemInteractionsInput) (*model.Interaction, error) {
@@ -115,6 +116,14 @@ func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.Int
 	if err != nil {
 		return nil, err
 	}
+	//Ensure optional arguments are set to defaults before insert into DB
+	var f = false
+	if input.Completed == nil {
+		input.Completed = &f
+	}
+	if input.SavedForLater == nil {
+		input.SavedForLater = &f
+	}
 	return r.DB.SaveInteraction(user.ID, input)
 }
 
@@ -154,14 +163,14 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 }
 
 func (r *queryResolver) Sources(ctx context.Context, input *model.ConnectionInput) (*model.Connection, error) {
-	sources, err := r.DB.PageSrcRSSFeeds(input)
+	sources, err := r.DB.ListSrcRSSFeeds()
 	if err != nil {
 		return nil, err
 	}
 	if sources == nil {
 		return nil, errors.New("no sources exist")
 	}
-	return sources, nil
+	return &model.Connection{}, nil
 }
 
 func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
@@ -235,13 +244,32 @@ func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.Preference
 	return r.DB.ListPreferenceSetsByUser(user.ID)
 }
 
-func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ConnectionInput) (*model.Connection, error) {
+func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ConnectionInput) (*model.ContentItemsConnection, error) {
 	log.Debug("resolving ContentItems")
-	contentItems, err := r.DB.PageContentItemsBySource(obj, input)
+
+	// contentItems, err := r.DB.PageContentItemsBySource(obj, input)
+	contentItems, err := r.DB.ListContentItemsBySource(obj)
 	if err != nil {
 		return nil, err
 	}
-	return contentItems, nil
+	page := pagination.ContentItems(contentItems)
+	pageInfo, err := pagination.BuildPage(input.First, input.After, page)
+	if err != nil {
+		return nil, err
+	}
+	var edges []*model.ContentItemsEdge
+	for i, v := range page {
+		edge := &model.ContentItemsEdge{
+			ContentItem: v,
+			Cursor:      page.GetID(i),
+		}
+		edges = append(edges, edge)
+	}
+	//Need to figure out how to get a []*model.ContentItem back out. Think I could pass one in and have buildPage modify it in place?
+	return &model.ContentItemsConnection{
+		Edges:    edges,
+		PageInfo: pageInfo,
+	}, nil
 }
 
 func (r *srcRSSFeedResolver) IsSubscribed(ctx context.Context, obj *model.SrcRSSFeed) (bool, error) {
@@ -264,7 +292,7 @@ func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFe
 }
 
 func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.ConnectionInput) (*model.Connection, error) {
-	return r.DB.PageSrcRSSFeedsByUser(obj, input)
+	return &model.Connection{}, nil
 }
 
 func (r *userResolver) PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error) {
@@ -276,11 +304,11 @@ func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User)
 }
 
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User, input *model.ConnectionInput) (*model.Connection, error) {
-	user, err := auth.GetCurrentUserFromCTX(ctx)
+	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.DB.PageUserSubscriptions(user.ID, input)
+	return &model.Connection{}, nil
 }
 
 func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readState *model.ReadState, input model.ConnectionInput) (*model.Connection, error) {
@@ -289,7 +317,7 @@ func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readSt
 		log.Errorf("error while getting Interactions for a user: %v", err)
 		return nil, errors.New("unauthorized request")
 	}
-	return r.DB.PageUserInteractions(obj.ID, readState, &input)
+	return &model.Connection{}, nil
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
