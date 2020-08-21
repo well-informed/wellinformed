@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
-	page "github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) {
@@ -82,39 +81,20 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 	return &feed, err
 }
 
-//Need to write this manually now...in order to select only the fields from the first table
-//Maybe there's a way to only select some fields?
-const feedsByUserStmt = `SELECT src_rss_feeds.*
-FROM src_rss_feeds
-INNER JOIN user_subscriptions
-ON src_rss_feeds.id = user_subscriptions.source_id
-WHERE user_subscriptions.user_id = $1 
-ORDER BY src_rss_feeds.id`
-
-func (db DB) PageSrcRSSFeedsByUser(user *model.User, input *model.ConnectionInput) (*model.Connection, error) {
-	feeds, err := db.listSrcRSSFeedsByQuery(feedsByUserStmt, user.ID)
-	if err != nil {
-		log.Error("error selecting base list of src_rss_feeds. err: ", err)
-	}
-	return page.BuildPage(input.First, input.After, page.SrcRSSFeedsToNodes(feeds))
-}
-
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
-	return db.listSrcRSSFeedsByQuery(feedsByUserStmt, user.ID)
-}
-
-const allFeedsStmt = `SELECT * FROM src_rss_feeds ORDER BY id`
-
-func (db DB) PageSrcRSSFeeds(input *model.ConnectionInput) (*model.Connection, error) {
-	feeds, err := db.listSrcRSSFeedsByQuery(allFeedsStmt)
-	if err != nil {
-		log.Error("error selecting base list of src_rss_feeds. err: ", err)
-	}
-	return page.BuildPage(input.First, input.After, page.SrcRSSFeedsToNodes(feeds))
+	//Need to write this manually now...in order to select only the fields from the first table
+	//Maybe there's a way to only select some fields?
+	stmt := `SELECT src_rss_feeds.*
+	FROM src_rss_feeds
+	INNER JOIN user_subscriptions
+	ON src_rss_feeds.id = user_subscriptions.source_id
+	WHERE user_subscriptions.user_id = $1 
+	ORDER BY src_rss_feeds.id`
+	return db.listSrcRSSFeedsByQuery(stmt, user.ID)
 }
 
 func (db DB) ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error) {
-	return db.listSrcRSSFeedsByQuery(allFeedsStmt)
+	return db.listSrcRSSFeedsByQuery(`SELECT * FROM src_rss_feeds ORDER BY id`)
 }
 
 func (db DB) listSrcRSSFeedsByQuery(stmt string, args ...interface{}) ([]*model.SrcRSSFeed, error) {

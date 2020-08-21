@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
-	page "github.com/well-informed/wellinformed/pagination"
 )
 
 func (db DB) InsertUserSubscription(user model.User, src model.SrcRSSFeed) (subscription *model.UserSubscription, err error) {
@@ -65,7 +64,7 @@ func (db DB) DeleteUserSubscription(userID int64, srcID int64) (int, error) {
 	return int(numDeleted), err
 }
 
-func (db DB) PageUserSubscriptions(userID int64, input *model.ConnectionInput) (*model.Connection, error) {
+func (db DB) ListUserSubscriptions(userID int64) ([]*model.UserSubscription, error) {
 	stmt := `SELECT * FROM user_subscriptions WHERE user_id = $1`
 
 	userSubscriptions := make([]*model.UserSubscription, 0)
@@ -74,5 +73,5 @@ func (db DB) PageUserSubscriptions(userID int64, input *model.ConnectionInput) (
 		log.Error("error listing subscriptions for user. err: ", err)
 		return nil, err
 	}
-	return page.BuildPage(input.First, input.After, page.UserSubscriptionsToNodes(userSubscriptions))
+	return userSubscriptions, nil
 }

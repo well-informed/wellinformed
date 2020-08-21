@@ -20,7 +20,7 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  contentItems(input: ConnectionInput): Connection!
+  contentItems(input: ContentItemConnectionInput): ContentItemConnection!
   isSubscribed: Boolean!
 }
 
@@ -60,35 +60,6 @@ type UserFeed {
   contentItems: [ContentItem!]!
 }
 
-input ConnectionInput {
-  first: Int!
-  after: String
-
-}
-type Connection {
-  edges: [Edge!]!
-  pageInfo: PageInfo!
-}
-
-type PageInfo {
-  hasPreviousPage: Boolean!
-  hasNextPage: Boolean!
-  startCursor: String!
-  endCursor: String!
-}
-
-type Edge {
-  node: Node!
-  cursor: String!
-}
-
-type Node {
-  value: Pageable!
-  id: ID!
-}
-
-union Pageable = Interaction | SrcRSSFeed | UserSubscription | ContentItem
-
 type User {
   id: ID!
   firstname: String!
@@ -97,13 +68,13 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
-  srcRSSFeeds(input: ConnectionInput): Connection!
+  srcRSSFeeds(input: SrcRSSFeedConnectionInput): SrcRSSFeedConnection!
   preferenceSets: [PreferenceSet!]!
   activePreferenceSet: PreferenceSet!
   createdAt: Time!
   updatedAt: Time!
-  subscriptions(input: ConnectionInput): Connection!
-  interactions(readState: ReadState, input: ConnectionInput!): Connection!
+  subscriptions(input: UserSubscriptionConnectionInput): UserSubscriptionConnection!
+  interactions(readState: ReadState, input: InteractionConnectionInput!): InteractionConnection!
 }
 
 type PreferenceSet {
@@ -189,9 +160,105 @@ input GetUserInput {
   username: String
 }
 
+# Pageable Interface for ContentItem
+input ContentItemConnectionInput {
+  first: Int!
+  after: String
+}
+type ContentItemConnection {
+  edges: [ContentItemEdge!]!
+  pageInfo: ContentItemPageInfo!
+}
+type ContentItemPageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
+type ContentItemEdge {
+  node: ContentItemNode!
+  cursor: String!
+}
+type ContentItemNode {
+  value: ContentItem!
+  id: ID!
+}
+
+# Pageable Interface for UserSubscription
+input UserSubscriptionConnectionInput {
+  first: Int!
+  after: String
+}
+type UserSubscriptionConnection {
+  edges: [UserSubscriptionEdge!]!
+  pageInfo: UserSubscriptionPageInfo!
+}
+type UserSubscriptionPageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
+type UserSubscriptionEdge {
+  node: UserSubscriptionNode!
+  cursor: String!
+}
+type UserSubscriptionNode {
+  value: UserSubscription!
+  id: ID!
+}
+
+# Pageable Interface for SrcRSSFeed
+input SrcRSSFeedConnectionInput {
+  first: Int!
+  after: String
+}
+type SrcRSSFeedConnection {
+  edges: [SrcRSSFeedEdge!]!
+  pageInfo: SrcRSSFeedPageInfo!
+}
+type SrcRSSFeedPageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
+type SrcRSSFeedEdge {
+  node: SrcRSSFeedNode!
+  cursor: String!
+}
+type SrcRSSFeedNode {
+  value: SrcRSSFeed!
+  id: ID!
+}
+
+# Pageable Interface for Interactions
+input InteractionConnectionInput {
+  first: Int!
+  after: String
+}
+type InteractionConnection {
+  edges: [InteractionEdge!]!
+  pageInfo: InteractionPageInfo!
+}
+type InteractionPageInfo {
+  hasPreviousPage: Boolean!
+  hasNextPage: Boolean!
+  startCursor: String!
+  endCursor: String!
+}
+type InteractionEdge {
+  node: InteractionNode!
+  cursor: String!
+}
+type InteractionNode {
+  value: Interaction!
+  id: ID!
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
-  sources(input: ConnectionInput): Connection!
+  sources(input: SrcRSSFeedConnectionInput): SrcRSSFeedConnection!
   userFeed: UserFeed!
   me: User!
   user(input: GetUserInput): User!
