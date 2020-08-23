@@ -65,19 +65,25 @@ func (db DB) GetInteractionByContentID(userID int64, contentItemID int64) (*mode
 }
 
 func (db DB) ListUserInteractions(userID int64, readState *model.ReadState) ([]*model.Interaction, error) {
+	var interactions []*model.Interaction
+	var err error
 	if readState == nil {
-		return db.listUserInteractionsByQuery(`SELECT * FROM interactions WHERE user_id = $1`, userID)
+		interactions, err = db.listUserInteractionsByQuery(`SELECT * FROM interactions WHERE user_id = $1`, userID)
+	} else {
+		interactions, err = db.listUserInteractionsByQuery(`SELECT * FROM interactions WHERE user_id = $1 AND read_state = $2`, userID, readState)
 	}
-
-	return db.listUserInteractionsByQuery(`SELECT * FROM interactions WHERE user_id = $1 AND read_state = $2`, userID, readState)
-
+	if err != nil {
+		log.Error("error selecting list of interactions. err: ", err)
+		return nil, err
+	}
+	return interactions, nil
 }
 
 func (db DB) listUserInteractionsByQuery(stmt string, args ...interface{}) ([]*model.Interaction, error) {
 	interactions := make([]*model.Interaction, 0)
 	err := db.Select(&interactions, stmt, args...)
 	if err != nil {
-		log.Error("error selecting all interactions. err: ", err)
+		log.Error("error selecting interactions. err: ", err)
 		return nil, err
 	}
 	return interactions, nil

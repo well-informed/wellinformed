@@ -1,0 +1,6 @@
+types:
+  - "Interaction"
+  - "ContentItem"
+  - "SrcRSSFeed"
+  - "UserSubscription"
+  
