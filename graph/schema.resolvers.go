@@ -13,6 +13,7 @@ import (
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/graph/model"
+	page "github.com/well-informed/wellinformed/pagination"
 )
 
 func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.ContentItem, input *model.ContentItemInteractionsInput) (*model.Interaction, error) {
@@ -160,15 +161,15 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	return feed, nil
 }
 
-func (r *queryResolver) Sources(ctx context.Context) ([]*model.SrcRSSFeed, error) {
-	sources, err := r.DB.ListSrcRSSFeeds()
+func (r *queryResolver) Sources(ctx context.Context, input *model.SrcRSSFeedConnectionInput) (*model.SrcRSSFeedConnection, error) {
+	feeds, err := r.DB.ListSrcRSSFeeds()
 	if err != nil {
 		return nil, err
 	}
-	if sources == nil {
+	if feeds == nil {
 		return nil, errors.New("no sources exist")
 	}
-	return sources, nil
+	return page.BuildSrcRSSFeedPage(input.First, input.After, feeds)
 }
 
 func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
@@ -242,13 +243,12 @@ func (r *queryResolver) Engines(ctx context.Context) ([]*model.Engine, error) {
 	return r.DB.ListEnginesByUser(user.ID)
 }
 
-func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
-	log.Debug("resolving ContentItems")
-	contentItems, err := r.DB.ListContentItemsBySource(obj)
+func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ContentItemConnectionInput) (*model.ContentItemConnection, error) {
+	items, err := r.DB.ListContentItemsBySource(obj)
 	if err != nil {
 		return nil, err
 	}
-	return contentItems, nil
+	return page.BuildContentItemPage(input.First, input.After, items)
 }
 
 func (r *srcRSSFeedResolver) IsSubscribed(ctx context.Context, obj *model.SrcRSSFeed) (bool, error) {
@@ -274,8 +274,12 @@ func (r *userResolver) Feeds(ctx context.Context, obj *model.User) ([]*model.Use
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error) {
-	return r.DB.ListSrcRSSFeedsByUser(obj)
+func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.SrcRSSFeedConnectionInput) (*model.SrcRSSFeedConnection, error) {
+	feeds, err := r.DB.ListSrcRSSFeedsByUser(obj)
+	if err != nil {
+		return nil, err
+	}
+	return page.BuildSrcRSSFeedPage(input.First, input.After, feeds)
 }
 
 func (r *userResolver) Engines(ctx context.Context, obj *model.User) ([]*model.Engine, error) {
@@ -286,29 +290,29 @@ func (r *userResolver) ActiveEngine(ctx context.Context, obj *model.User) (*mode
 	return r.DB.GetEngineByName(obj.ID, obj.ActiveEngineName)
 }
 
-func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
+func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User, input *model.UserSubscriptionConnectionInput) (*model.UserSubscriptionConnection, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.DB.ListUserSubscriptions(user.ID)
+	subs, err := r.DB.ListUserSubscriptions(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	return page.BuildUserSubscriptionPage(input.First, input.After, subs)
 }
 
-func (r *userResolver) Interactions(ctx context.Context, obj *model.User, input *model.UserInteractionsInput) ([]*model.Interaction, error) {
-	var interactionInput *model.ReadState
+func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readState *model.ReadState, input model.InteractionConnectionInput) (*model.InteractionConnection, error) {
 	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting Interactions for a user: %v", err)
 		return nil, errors.New("you are not signed in")
 	}
-
-	if input == nil {
-		interactionInput = nil
-	} else {
-		interactionInput = input.ReadState
+	interactions, err := r.DB.ListUserInteractions(obj.ID, readState)
+	if err != nil {
+		return nil, err
 	}
-
-	return r.DB.ListUserInteractions(obj.ID, interactionInput)
+	return page.BuildInteractionPage(input.First, input.After, interactions)
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {

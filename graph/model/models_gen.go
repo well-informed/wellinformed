@@ -36,8 +36,30 @@ type AuthToken struct {
 	ExpiredAt   time.Time `json:"expiredAt"`
 }
 
+type ContentItemConnection struct {
+	Edges    []*ContentItemEdge   `json:"edges"`
+	PageInfo *ContentItemPageInfo `json:"pageInfo"`
+}
+
+type ContentItemConnectionInput struct {
+	First int     `json:"first"`
+	After *string `json:"after"`
+}
+
+type ContentItemEdge struct {
+	Node   *ContentItem `json:"node"`
+	Cursor string       `json:"cursor"`
+}
+
 type ContentItemInteractionsInput struct {
 	UserID *int64 `json:"userID"`
+}
+
+type ContentItemPageInfo struct {
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	HasNextPage     bool   `json:"hasNextPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
 }
 
 type DeleteResponse struct {
@@ -60,12 +82,34 @@ type GetUserInput struct {
 	Username *string `json:"username"`
 }
 
+type InteractionConnection struct {
+	Edges    []*InteractionEdge   `json:"edges"`
+	PageInfo *InteractionPageInfo `json:"pageInfo"`
+}
+
+type InteractionConnectionInput struct {
+	First int     `json:"first"`
+	After *string `json:"after"`
+}
+
+type InteractionEdge struct {
+	Node   *Interaction `json:"node"`
+	Cursor string       `json:"cursor"`
+}
+
 type InteractionInput struct {
 	ContentItemID int64     `json:"contentItemID"`
 	ReadState     ReadState `json:"readState"`
 	Completed     *bool     `json:"completed"`
 	SavedForLater *bool     `json:"savedForLater"`
 	PercentRead   *float64  `json:"percentRead"`
+}
+
+type InteractionPageInfo struct {
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	HasNextPage     bool   `json:"hasNextPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
 }
 
 type LoginInput struct {
@@ -82,28 +126,72 @@ type RegisterInput struct {
 	Lastname        string `json:"lastname"`
 }
 
+type SrcRSSFeedConnection struct {
+	Edges    []*SrcRSSFeedEdge   `json:"edges"`
+	PageInfo *SrcRSSFeedPageInfo `json:"pageInfo"`
+}
+
+type SrcRSSFeedConnectionInput struct {
+	First int     `json:"first"`
+	After *string `json:"after"`
+}
+
+type SrcRSSFeedEdge struct {
+	Node   *SrcRSSFeed `json:"node"`
+	Cursor string      `json:"cursor"`
+}
+
 type SrcRSSFeedInput struct {
 	ID       *int64  `json:"id"`
 	Link     *string `json:"link"`
 	FeedLink *string `json:"feedLink"`
 }
 
+type SrcRSSFeedPageInfo struct {
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	HasNextPage     bool   `json:"hasNextPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
+}
+
 type UserFeed struct {
-	ID           int64          `json:"id"`
-	UserID       int64          `json:"userID"`
-	User         *User          `json:"user"`
-	Title        string         `json:"title"`
-	Name         string         `json:"name"`
-	ContentItems []*ContentItem `json:"contentItems"`
-	Sources      []Feed         `json:"sources"`
-	Engine       *Engine        `json:"engine"`
-	IsActive     bool           `json:"isActive"`
+	ID           int64                  `json:"id"`
+	UserID       int64                  `json:"userID"`
+	User         *User                  `json:"user"`
+	Title        string                 `json:"title"`
+	Name         string                 `json:"name"`
+	ContentItems *ContentItemConnection `json:"contentItems"`
+	Sources      []Feed                 `json:"sources"`
+	Engine       *Engine                `json:"engine"`
+	IsActive     bool                   `json:"isActive"`
 }
 
 func (UserFeed) IsFeed() {}
 
 type UserInteractionsInput struct {
 	ReadState *ReadState `json:"readState"`
+}
+
+type UserSubscriptionConnection struct {
+	Edges    []*UserSubscriptionEdge   `json:"edges"`
+	PageInfo *UserSubscriptionPageInfo `json:"pageInfo"`
+}
+
+type UserSubscriptionConnectionInput struct {
+	First int     `json:"first"`
+	After *string `json:"after"`
+}
+
+type UserSubscriptionEdge struct {
+	Node   *UserSubscription `json:"node"`
+	Cursor string            `json:"cursor"`
+}
+
+type UserSubscriptionPageInfo struct {
+	HasPreviousPage bool   `json:"hasPreviousPage"`
+	HasNextPage     bool   `json:"hasNextPage"`
+	StartCursor     string `json:"startCursor"`
+	EndCursor       string `json:"endCursor"`
 }
 
 type ReadState string

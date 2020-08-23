@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed"
 	"github.com/well-informed/wellinformed/graph/model"
+	"github.com/well-informed/wellinformed/pagination"
 )
 
 type feedService struct {
@@ -34,9 +35,13 @@ func (f feedService) Serve(ctx context.Context, user *model.User) (*model.UserFe
 	if err != nil {
 		log.Error("could not serve feed. err: ", err)
 	}
+	contentItemsPage, err := pagination.BuildContentItemPage(100, nil, contentItems)
+	if err != nil {
+		log.Error("could not build contentItemsPage in order to serve feed. err: ", err)
+	}
 	return &model.UserFeed{
 		UserID:       user.ID,
 		Name:         "default",
-		ContentItems: contentItems,
+		ContentItems: contentItemsPage,
 	}, nil
 }

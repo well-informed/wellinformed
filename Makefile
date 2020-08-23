@@ -13,7 +13,8 @@ restart: down up wait run
 wait:
 	sleep 1
 
-gql:
+gen:
+	go generate ./pagination
 	gqlgen generate
 
 test:

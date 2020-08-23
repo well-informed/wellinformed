@@ -67,7 +67,7 @@ func (db DB) DeleteUserSubscription(userID int64, srcID int64) (int, error) {
 func (db DB) ListUserSubscriptions(userID int64) ([]*model.UserSubscription, error) {
 	stmt := `SELECT * FROM user_subscriptions WHERE user_id = $1`
 
-	var userSubscriptions []*model.UserSubscription
+	userSubscriptions := make([]*model.UserSubscription, 0)
 	err := db.Select(&userSubscriptions, stmt, userID)
 	if err != nil {
 		log.Error("error listing subscriptions for user. err: ", err)
