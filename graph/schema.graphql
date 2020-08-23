@@ -104,6 +104,7 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
+  feeds: [UserFeed!]!
   srcRSSFeeds: [SrcRSSFeed!]!
   engines: [Engine!]!
   activeEngine: Engine!
@@ -174,6 +175,23 @@ input GetUserInput {
   username: String
 }
 
+input AddSourceInput {
+  """
+  the ID of the feed you want to subscribe to
+  """
+  sourceFeedID: ID!
+  """
+  the ID of the feed that is subscribing to the source. defaults to the active feed
+  """
+  targetFeedID: ID
+}
+
+input AddUserFeedInput {
+  name: String!
+  engineID: ID
+  clonedFeedID: ID
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   sources: [SrcRSSFeed!]!
@@ -190,8 +208,9 @@ type DeleteResponse {
 }
 
 type Mutation {
+  addUserFeed(input: AddUserFeedInput!): UserFeed!
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
-  addSource(feedID: ID!): Feed!
+  addSource(input: AddSourceInput!): Feed!
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!

@@ -13,6 +13,19 @@ type Feed interface {
 	IsFeed()
 }
 
+type AddSourceInput struct {
+	// the ID of the feed you want to subscribe to
+	SourceFeedID int64 `json:"sourceFeedID"`
+	// the ID of the feed that is subscribing to the source. defaults to the active feed
+	TargetFeedID *int64 `json:"targetFeedID"`
+}
+
+type AddUserFeedInput struct {
+	Name         string `json:"name"`
+	EngineID     *int64 `json:"engineID"`
+	ClonedFeedID *int64 `json:"clonedFeedID"`
+}
+
 type AuthResponse struct {
 	AuthToken *AuthToken `json:"authToken"`
 	User      *User      `json:"user"`

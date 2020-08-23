@@ -48,6 +48,11 @@ func (r *interactionResolver) ContentItem(ctx context.Context, obj *model.Intera
 	return r.DB.GetContentItemByInteraction(obj.ID)
 }
 
+func (r *mutationResolver) AddUserFeed(ctx context.Context, input model.AddUserFeedInput) (*model.UserFeed, error) {
+	//Adding without cloning engine or source list for a start...
+	return nil, errors.New("not implemented")
+}
+
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
@@ -90,7 +95,7 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	return insertedFeed, nil
 }
 
-func (r *mutationResolver) AddSource(ctx context.Context, feedID int64) (model.Feed, error) {
+func (r *mutationResolver) AddSource(ctx context.Context, input model.AddSourceInput) (model.Feed, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
@@ -263,6 +268,10 @@ func (r *srcRSSFeedResolver) IsSubscribed(ctx context.Context, obj *model.SrcRSS
 
 func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFeed, error) {
 	return r.Query().UserFeed(ctx)
+}
+
+func (r *userResolver) Feeds(ctx context.Context, obj *model.User) ([]*model.UserFeed, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error) {

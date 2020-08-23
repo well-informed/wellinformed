@@ -106,8 +106,9 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddSource          func(childComplexity int, feedID int64) int
+		AddSource          func(childComplexity int, input model.AddSourceInput) int
 		AddSrcRSSFeed      func(childComplexity int, feedLink string) int
+		AddUserFeed        func(childComplexity int, input model.AddUserFeedInput) int
 		DeleteSubscription func(childComplexity int, srcRssfeedID int64) int
 		Login              func(childComplexity int, input model.LoginInput) int
 		Register           func(childComplexity int, input model.RegisterInput) int
@@ -146,6 +147,7 @@ type ComplexityRoot struct {
 		Email         func(childComplexity int) int
 		Engines       func(childComplexity int) int
 		Feed          func(childComplexity int) int
+		Feeds         func(childComplexity int) int
 		Firstname     func(childComplexity int) int
 		ID            func(childComplexity int) int
 		Interactions  func(childComplexity int, input *model.UserInteractionsInput) int
@@ -188,8 +190,9 @@ type InteractionResolver interface {
 	ContentItem(ctx context.Context, obj *model.Interaction) (*model.ContentItem, error)
 }
 type MutationResolver interface {
+	AddUserFeed(ctx context.Context, input model.AddUserFeedInput) (*model.UserFeed, error)
 	AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
-	AddSource(ctx context.Context, feedID int64) (model.Feed, error)
+	AddSource(ctx context.Context, input model.AddSourceInput) (model.Feed, error)
 	DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
@@ -212,6 +215,7 @@ type SrcRSSFeedResolver interface {
 }
 type UserResolver interface {
 	Feed(ctx context.Context, obj *model.User) (*model.UserFeed, error)
+	Feeds(ctx context.Context, obj *model.User) ([]*model.UserFeed, error)
 	SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*model.SrcRSSFeed, error)
 	Engines(ctx context.Context, obj *model.User) ([]*model.Engine, error)
 	ActiveEngine(ctx context.Context, obj *model.User) (*model.Engine, error)
@@ -506,7 +510,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddSource(childComplexity, args["feedID"].(int64)), true
+		return e.complexity.Mutation.AddSource(childComplexity, args["input"].(model.AddSourceInput)), true
 
 	case "Mutation.addSrcRSSFeed":
 		if e.complexity.Mutation.AddSrcRSSFeed == nil {
@@ -519,6 +523,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.AddSrcRSSFeed(childComplexity, args["feedLink"].(string)), true
+
+	case "Mutation.addUserFeed":
+		if e.complexity.Mutation.AddUserFeed == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addUserFeed_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddUserFeed(childComplexity, args["input"].(model.AddUserFeedInput)), true
 
 	case "Mutation.deleteSubscription":
 		if e.complexity.Mutation.DeleteSubscription == nil {
@@ -767,6 +783,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.User.Feed(childComplexity), true
+
+	case "User.feeds":
+		if e.complexity.User.Feeds == nil {
+			break
+		}
+
+		return e.complexity.User.Feeds(childComplexity), true
 
 	case "User.firstname":
 		if e.complexity.User.Firstname == nil {
@@ -1097,6 +1120,7 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
+  feeds: [UserFeed!]!
   srcRSSFeeds: [SrcRSSFeed!]!
   engines: [Engine!]!
   activeEngine: Engine!
@@ -1167,6 +1191,23 @@ input GetUserInput {
   username: String
 }
 
+input AddSourceInput {
+  """
+  the ID of the feed you want to subscribe to
+  """
+  sourceFeedID: ID!
+  """
+  the ID of the feed that is subscribing to the source. defaults to the active feed
+  """
+  targetFeedID: ID
+}
+
+input AddUserFeedInput {
+  name: String!
+  engineID: ID
+  clonedFeedID: ID
+}
+
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
   sources: [SrcRSSFeed!]!
@@ -1183,8 +1224,9 @@ type DeleteResponse {
 }
 
 type Mutation {
+  addUserFeed(input: AddUserFeedInput!): UserFeed!
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
-  addSource(feedID: ID!): Feed!
+  addSource(input: AddSourceInput!): Feed!
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
@@ -1216,14 +1258,14 @@ func (ec *executionContext) field_ContentItem_interaction_args(ctx context.Conte
 func (ec *executionContext) field_Mutation_addSource_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 int64
-	if tmp, ok := rawArgs["feedID"]; ok {
-		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
+	var arg0 model.AddSourceInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNAddSourceInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAddSourceInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["feedID"] = arg0
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -1238,6 +1280,20 @@ func (ec *executionContext) field_Mutation_addSrcRSSFeed_args(ctx context.Contex
 		}
 	}
 	args["feedLink"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_addUserFeed_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.AddUserFeedInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNAddUserFeedInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAddUserFeedInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -2635,6 +2691,47 @@ func (ec *executionContext) _Interaction_updatedAt(ctx context.Context, field gr
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_addUserFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_addUserFeed_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AddUserFeed(rctx, args["input"].(model.AddUserFeedInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.UserFeed)
+	fc.Result = res
+	return ec.marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_addSrcRSSFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2700,7 +2797,7 @@ func (ec *executionContext) _Mutation_addSource(ctx context.Context, field graph
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddSource(rctx, args["feedID"].(int64))
+		return ec.resolvers.Mutation().AddSource(rctx, args["input"].(model.AddSourceInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3886,6 +3983,40 @@ func (ec *executionContext) _User_feed(ctx context.Context, field graphql.Collec
 	res := resTmp.(*model.UserFeed)
 	fc.Result = res
 	return ec.marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_feeds(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().Feeds(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.UserFeed)
+	fc.Result = res
+	return ec.marshalNUserFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeedᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_srcRSSFeeds(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -5618,6 +5749,60 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputAddSourceInput(ctx context.Context, obj interface{}) (model.AddSourceInput, error) {
+	var it model.AddSourceInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "sourceFeedID":
+			var err error
+			it.SourceFeedID, err = ec.unmarshalNID2int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "targetFeedID":
+			var err error
+			it.TargetFeedID, err = ec.unmarshalOID2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputAddUserFeedInput(ctx context.Context, obj interface{}) (model.AddUserFeedInput, error) {
+	var it model.AddUserFeedInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "name":
+			var err error
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "engineID":
+			var err error
+			it.EngineID, err = ec.unmarshalOID2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "clonedFeedID":
+			var err error
+			it.ClonedFeedID, err = ec.unmarshalOID2ᚖint64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputContentItemInteractionsInput(ctx context.Context, obj interface{}) (model.ContentItemInteractionsInput, error) {
 	var it model.ContentItemInteractionsInput
 	var asMap = obj.(map[string]interface{})
@@ -6237,6 +6422,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "addUserFeed":
+			out.Values[i] = ec._Mutation_addUserFeed(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "addSrcRSSFeed":
 			out.Values[i] = ec._Mutation_addSrcRSSFeed(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -6555,6 +6745,20 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._User_feed(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "feeds":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_feeds(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -7011,6 +7215,14 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) unmarshalNAddSourceInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAddSourceInput(ctx context.Context, v interface{}) (model.AddSourceInput, error) {
+	return ec.unmarshalInputAddSourceInput(ctx, v)
+}
+
+func (ec *executionContext) unmarshalNAddUserFeedInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAddUserFeedInput(ctx context.Context, v interface{}) (model.AddUserFeedInput, error) {
+	return ec.unmarshalInputAddUserFeedInput(ctx, v)
+}
+
 func (ec *executionContext) marshalNAuthResponse2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐAuthResponse(ctx context.Context, sel ast.SelectionSet, v model.AuthResponse) graphql.Marshaler {
 	return ec._AuthResponse(ctx, sel, &v)
 }
@@ -7304,6 +7516,43 @@ func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwel
 
 func (ec *executionContext) marshalNUserFeed2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx context.Context, sel ast.SelectionSet, v model.UserFeed) graphql.Marshaler {
 	return ec._UserFeed(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserFeed2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeedᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.UserFeed) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserFeed(ctx context.Context, sel ast.SelectionSet, v *model.UserFeed) graphql.Marshaler {
