@@ -14,14 +14,14 @@ func TestUserSQL(t *testing.T) {
 	db := NewDB(wellinformed.GetConfig())
 	currentTime := time.Now()
 	user := &model.User{
-		Firstname:               "JohnJacob",
-		Lastname:                "JingleHeimerSchmidt",
-		Username:                "hisnameismyname",
-		Email:                   "longname@email.com",
-		Password:                "asldkfjas;dfk",
-		ActivePreferenceSetName: "default",
-		CreatedAt:               currentTime,
-		UpdatedAt:               currentTime,
+		Firstname:        "JohnJacob",
+		Lastname:         "JingleHeimerSchmidt",
+		Username:         "hisnameismyname",
+		Email:            "longname@email.com",
+		Password:         "asldkfjas;dfk",
+		ActiveEngineName: "default",
+		CreatedAt:        currentTime,
+		UpdatedAt:        currentTime,
 	}
 	opt := cmpopts.IgnoreFields(model.User{}, "ID", "CreatedAt", "UpdatedAt")
 

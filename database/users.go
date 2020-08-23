@@ -22,7 +22,7 @@ func (db DB) getUserByField(selection string, whereClause string, args ...interf
 		&user.Lastname,
 		&user.Username,
 		&user.Password,
-		&user.ActivePreferenceSetName,
+		&user.ActiveEngineName,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -71,7 +71,7 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 		user.Lastname,
 		user.Username,
 		user.Password,
-		user.ActivePreferenceSetName,
+		user.ActiveEngineName,
 		time.Now(),
 		time.Now(),
 	).Scan(&ID)
@@ -105,7 +105,7 @@ func (db DB) UpdateUser(user model.User) (model.User, error) {
 		user.Lastname,
 		user.Username,
 		user.Password,
-		user.ActivePreferenceSetName,
+		user.ActiveEngineName,
 		time.Now(),
 	).Scan(&ID)
 	if err != nil {
@@ -120,7 +120,7 @@ func (db DB) GetUserByInteraction(interactionId int64) (*model.User, error) {
 	var user model.User
 
 	stmt := `
-		SELECT u.* FROM users u 
+		SELECT u.* FROM users u
 		INNER JOIN interactions i on u.id = i.user_id
 		WHERE i.id = $1
 		LIMIT 1
@@ -133,7 +133,7 @@ func (db DB) GetUserByInteraction(interactionId int64) (*model.User, error) {
 		&user.Lastname,
 		&user.Username,
 		&user.Password,
-		&user.ActivePreferenceSetName,
+		&user.ActiveEngineName,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)

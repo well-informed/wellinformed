@@ -40,11 +40,11 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 	}
 
 	user := &model.User{
-		Username:                input.Username,
-		Email:                   input.Email,
-		Firstname:               input.Firstname,
-		Lastname:                input.Lastname,
-		ActivePreferenceSetName: "default",
+		Username:         input.Username,
+		Email:            input.Email,
+		Firstname:        input.Firstname,
+		Lastname:         input.Lastname,
+		ActiveEngineName: "default",
 	}
 
 	hashedPassword, err := auth.HashPassword(input.Password)
@@ -62,7 +62,7 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 		return nil, err
 	}
 
-	_, err = u.db.SavePreferenceSet(&model.PreferenceSet{
+	_, err = u.db.SaveEngine(&model.Engine{
 		UserID: createdUser.ID,
 		Name:   "default",
 		Sort:   model.SortTypeChronological,
@@ -111,14 +111,14 @@ func (u *UserService) Login(ctx context.Context, input model.LoginInput) (*model
 	}, nil
 }
 
-func (u *UserService) SavePreferenceSet(ctx context.Context, input *model.PreferenceSetInput) (*model.PreferenceSet, error) {
+func (u *UserService) SaveEngine(ctx context.Context, input *model.EngineInput) (*model.Engine, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Error("user not logged in. err: ", err)
 		return nil, err
 	}
 
-	prefSet := &model.PreferenceSet{
+	prefSet := &model.Engine{
 		UserID:    user.ID,
 		Name:      input.Name,
 		Sort:      input.Sort,
@@ -126,14 +126,14 @@ func (u *UserService) SavePreferenceSet(ctx context.Context, input *model.Prefer
 		EndDate:   input.EndDate,
 	}
 
-	updatedPrefSet, err := u.db.SavePreferenceSet(prefSet)
+	updatedPrefSet, err := u.db.SaveEngine(prefSet)
 	if err != nil {
-		log.Error("couldn't update preferenceSet. err: ", err)
+		log.Error("couldn't update Engine. err: ", err)
 		return nil, err
 	}
 	if input.Activate == true {
-		if user.ActivePreferenceSetName != updatedPrefSet.Name {
-			user.ActivePreferenceSetName = updatedPrefSet.Name
+		if user.ActiveEngineName != updatedPrefSet.Name {
+			user.ActiveEngineName = updatedPrefSet.Name
 			u.db.UpdateUser(*user)
 		}
 	}

@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
@@ -33,6 +34,10 @@ func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.Conten
 	}
 
 	return r.DB.GetInteractionByContentID(userIdToUse, obj.ID)
+}
+
+func (r *engineResolver) User(ctx context.Context, obj *model.Engine) (*model.User, error) {
+	return r.DB.GetUserByID(obj.UserID)
 }
 
 func (r *interactionResolver) User(ctx context.Context, obj *model.Interaction) (*model.User, error) {
@@ -85,6 +90,10 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	return insertedFeed, nil
 }
 
+func (r *mutationResolver) AddSource(ctx context.Context, feedID int64) (model.Feed, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *mutationResolver) DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
@@ -126,23 +135,8 @@ func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.Int
 	return r.DB.SaveInteraction(user.ID, input)
 }
 
-func (r *mutationResolver) SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
-	return r.UserService.SavePreferenceSet(ctx, &input)
-}
-
-func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
-	return r.DB.GetUserByID(obj.UserID)
-}
-
-func (r *preferenceSetResolver) Active(ctx context.Context, obj *model.PreferenceSet) (bool, error) {
-	user, err := auth.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		return false, err
-	}
-	if user.ActivePreferenceSetName == obj.Name {
-		return true, nil
-	}
-	return false, nil
+func (r *mutationResolver) SaveEngine(ctx context.Context, engine model.EngineInput) (*model.Engine, error) {
+	return r.UserService.SaveEngine(ctx, &engine)
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -176,17 +170,17 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting user feed: %v", err)
-		return nil, errors.New("You are not signed in!")
+		return nil, errors.New("you are not signed in")
 	}
 	log.Printf("currentUser: %v", currentUser)
-	return r.Feed.Serve(ctx, currentUser)
+	return r.FeedService.Serve(ctx, currentUser)
 }
 
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting user feed: %v", err)
-		return nil, errors.New("You are not signed in!")
+		return nil, errors.New("you are not signed in")
 	}
 	return currentUser, nil
 }
@@ -202,7 +196,7 @@ func (r *queryResolver) User(ctx context.Context, input *model.GetUserInput) (*m
 	} else if input.Username != nil {
 		user, err = r.DB.GetUserByUsername(*input.Username)
 	} else {
-		return nil, errors.New("You need to provide an input")
+		return nil, errors.New("you need to provide an input")
 	}
 
 	if err != nil {
@@ -235,12 +229,12 @@ func (r *queryResolver) GetInteractionByContentID(ctx context.Context, input int
 	return r.DB.GetInteractionByContentID(currentUser.ID, input)
 }
 
-func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
+func (r *queryResolver) Engines(ctx context.Context) ([]*model.Engine, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.DB.ListPreferenceSetsByUser(user.ID)
+	return r.DB.ListEnginesByUser(user.ID)
 }
 
 func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed) ([]*model.ContentItem, error) {
@@ -275,12 +269,12 @@ func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User) ([]*mod
 	return r.DB.ListSrcRSSFeedsByUser(obj)
 }
 
-func (r *userResolver) PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error) {
-	return r.DB.ListPreferenceSetsByUser(obj.ID)
+func (r *userResolver) Engines(ctx context.Context, obj *model.User) ([]*model.Engine, error) {
+	return r.DB.ListEnginesByUser(obj.ID)
 }
 
-func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error) {
-	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSetName)
+func (r *userResolver) ActiveEngine(ctx context.Context, obj *model.User) (*model.Engine, error) {
+	return r.DB.GetEngineByName(obj.ID, obj.ActiveEngineName)
 }
 
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User) ([]*model.UserSubscription, error) {
@@ -296,7 +290,7 @@ func (r *userResolver) Interactions(ctx context.Context, obj *model.User, input 
 	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting Interactions for a user: %v", err)
-		return nil, errors.New("You are not signed in!")
+		return nil, errors.New("you are not signed in")
 	}
 
 	if input == nil {
@@ -331,14 +325,14 @@ func (r *userSubscriptionResolver) SrcRSSFeed(ctx context.Context, obj *model.Us
 // ContentItem returns generated.ContentItemResolver implementation.
 func (r *Resolver) ContentItem() generated.ContentItemResolver { return &contentItemResolver{r} }
 
+// Engine returns generated.EngineResolver implementation.
+func (r *Resolver) Engine() generated.EngineResolver { return &engineResolver{r} }
+
 // Interaction returns generated.InteractionResolver implementation.
 func (r *Resolver) Interaction() generated.InteractionResolver { return &interactionResolver{r} }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
-
-// PreferenceSet returns generated.PreferenceSetResolver implementation.
-func (r *Resolver) PreferenceSet() generated.PreferenceSetResolver { return &preferenceSetResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
@@ -355,9 +349,9 @@ func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 }
 
 type contentItemResolver struct{ *Resolver }
+type engineResolver struct{ *Resolver }
 type interactionResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
-type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }

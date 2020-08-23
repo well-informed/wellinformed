@@ -1,4 +1,4 @@
-package feed
+package userFeed
 
 import (
 	"context"
@@ -20,7 +20,7 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 }
 
 func (f feedService) Serve(ctx context.Context, user *model.User) (*model.UserFeed, error) {
-	prefSet, err := f.db.GetPreferenceSetByName(user.ID, user.ActivePreferenceSetName)
+	prefSet, err := f.db.GetEngineByName(user.ID, user.ActiveEngineName)
 	if err != nil {
 		return nil, errors.New("could not find user preference set")
 	}

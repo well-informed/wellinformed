@@ -14,16 +14,18 @@ type SrcRSSFeed struct {
 	Generator     *string   `json:"generator"`
 }
 
+func (SrcRSSFeed) IsFeed() {}
+
 type User struct {
-	ID                      int64     `json:"id"`
-	Firstname               string    `json:"firstname"`
-	Lastname                string    `json:"lastname"`
-	Username                string    `json:"username"`
-	Email                   string    `json:"email"`
-	Password                string    `json:"password"`
-	ActivePreferenceSetName string    `json:"activePreferenceSet"`
-	CreatedAt               time.Time `json:"createdAt"`
-	UpdatedAt               time.Time `json:"updatedAt"`
+	ID               int64     `json:"id"`
+	Firstname        string    `json:"firstname"`
+	Lastname         string    `json:"lastname"`
+	Username         string    `json:"username"`
+	Email            string    `json:"email"`
+	Password         string    `json:"password"`
+	ActiveEngineName string    `json:"activeEngine"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
 type UserSubscription struct {
@@ -33,7 +35,7 @@ type UserSubscription struct {
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
 
-type PreferenceSet struct {
+type Engine struct {
 	ID        int64      `json:"id"`
 	UserID    int64      `json:"user" db:"user_id"`
 	Name      string     `json:"name"`

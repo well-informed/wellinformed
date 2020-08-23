@@ -1,16 +1,11 @@
 scalar Time
 
-type AuthToken {
-  accessToken: String!
-  expiredAt: Time!
+interface Feed {
+  title: String!
+  contentItems: [ContentItem!]
 }
 
-type AuthResponse {
-  authToken: AuthToken!
-  user: User!
-}
-
-type SrcRSSFeed {
+type SrcRSSFeed implements Feed {
   id: ID!
   title: String!
   description: String
@@ -20,8 +15,51 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  contentItems: [ContentItem!]!
+  contentItems: [ContentItem!]
   isSubscribed: Boolean!
+}
+
+type UserFeed implements Feed {
+  id: ID!
+  userID: ID!
+  user: User!
+  title: String!
+  name: String!
+  contentItems: [ContentItem!]
+  sources: [Feed!]
+  engine: Engine!
+  isActive: Boolean!
+}
+
+type Engine {
+  id: ID!
+  user: User!
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+input EngineInput {
+    name: String!
+  """
+  true sets the entered engine as active, false never has any effect.
+  A prefSet can only become inactive if another prefSet is set to active
+  """
+  activate: Boolean!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+type AuthToken {
+  accessToken: String!
+  expiredAt: Time!
+}
+
+type AuthResponse {
+  authToken: AuthToken!
+  user: User!
 }
 
 input ContentItemInteractionsInput {
@@ -54,12 +92,6 @@ type UserSubscription {
   createdAt: Time!
 }
 
-type UserFeed {
-  userID: ID!
-  name: String!
-  contentItems: [ContentItem!]!
-}
-
 input UserInteractionsInput {
   readState: ReadState
 }
@@ -73,34 +105,12 @@ type User {
   password: String!
   feed: UserFeed!
   srcRSSFeeds: [SrcRSSFeed!]!
-  preferenceSets: [PreferenceSet!]!
-  activePreferenceSet: PreferenceSet!
+  engines: [Engine!]!
+  activeEngine: Engine!
   createdAt: Time!
   updatedAt: Time!
   subscriptions: [UserSubscription!]
   interactions(input: UserInteractionsInput): [Interaction]
-}
-
-type PreferenceSet {
-  id: ID!
-  user: User!
-  name: String!
-  active: Boolean!
-  sort: sortType!
-  startDate: Time
-  endDate: Time
-}
-
-input PreferenceSetInput {
-  name: String!
-  """
-  true sets the entered preference set as active, false never has any effect.
-  A prefSet can only become inactive if another prefSet is set to active
-  """
-  activate: Boolean!
-  sort: sortType!
-  startDate: Time
-  endDate: Time
 }
 
 enum sortType {
@@ -172,7 +182,7 @@ type Query {
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
   getInteractionByContentID(input: ID!): Interaction
-  preferenceSets: [PreferenceSet!]!
+  engines: [Engine!]!
 }
 
 type DeleteResponse {
@@ -181,9 +191,10 @@ type DeleteResponse {
 
 type Mutation {
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
+  addSource(feedID: ID!): Feed!
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
   saveInteraction(input: InteractionInput): ContentItem!
-  savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
+  saveEngine(engine: EngineInput!): Engine!
 }

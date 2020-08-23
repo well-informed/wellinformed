@@ -12,12 +12,12 @@ import (
 	"github.com/well-informed/wellinformed"
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
-	feed "github.com/well-informed/wellinformed/feedService"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/rss"
 	"github.com/well-informed/wellinformed/subscriber"
 	"github.com/well-informed/wellinformed/user"
+	"github.com/well-informed/wellinformed/userFeed"
 )
 
 const defaultPort = "8080"
@@ -34,13 +34,13 @@ func main() {
 	if err != nil {
 		log.Fatal("couldn't initialize new subscriber properly")
 	}
-	feedService := feed.NewFeedService(db)
+	feedService := userFeed.NewFeedService(db)
 
 	resolver := &graph.Resolver{
 		DB:          db,
 		RSS:         rss,
 		Sub:         sub,
-		Feed:        feedService,
+		FeedService: feedService,
 		UserService: user.NewUserService(db),
 	}
 

@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+type Feed interface {
+	IsFeed()
+}
+
 type AuthResponse struct {
 	AuthToken *AuthToken `json:"authToken"`
 	User      *User      `json:"user"`
@@ -25,6 +29,16 @@ type ContentItemInteractionsInput struct {
 
 type DeleteResponse struct {
 	Ok bool `json:"ok"`
+}
+
+type EngineInput struct {
+	Name string `json:"name"`
+	// true sets the entered engine as active, false never has any effect.
+	// A prefSet can only become inactive if another prefSet is set to active
+	Activate  bool       `json:"activate"`
+	Sort      SortType   `json:"sort"`
+	StartDate *time.Time `json:"startDate"`
+	EndDate   *time.Time `json:"endDate"`
 }
 
 type GetUserInput struct {
@@ -46,16 +60,6 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
-type PreferenceSetInput struct {
-	Name string `json:"name"`
-	// true sets the entered preference set as active, false never has any effect.
-	// A prefSet can only become inactive if another prefSet is set to active
-	Activate  bool       `json:"activate"`
-	Sort      SortType   `json:"sort"`
-	StartDate *time.Time `json:"startDate"`
-	EndDate   *time.Time `json:"endDate"`
-}
-
 type RegisterInput struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`
@@ -72,10 +76,18 @@ type SrcRSSFeedInput struct {
 }
 
 type UserFeed struct {
+	ID           int64          `json:"id"`
 	UserID       int64          `json:"userID"`
+	User         *User          `json:"user"`
+	Title        string         `json:"title"`
 	Name         string         `json:"name"`
 	ContentItems []*ContentItem `json:"contentItems"`
+	Sources      []Feed         `json:"sources"`
+	Engine       *Engine        `json:"engine"`
+	IsActive     bool           `json:"isActive"`
 }
+
+func (UserFeed) IsFeed() {}
 
 type UserInteractionsInput struct {
 	ReadState *ReadState `json:"readState"`

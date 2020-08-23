@@ -13,6 +13,6 @@ type Resolver struct {
 	DB          wellinformed.Persistor
 	RSS         wellinformed.RSS
 	Sub         wellinformed.Subscriber
-	Feed        wellinformed.FeedService
+	FeedService wellinformed.FeedService
 	UserService *user.UserService
 }
