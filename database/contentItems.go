@@ -87,11 +87,15 @@ func (db DB) GetContentItem(id int64) (*model.ContentItem, error) {
 
 func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentItem, error) {
 	log.Debug("received query with src feed object: ", src)
-	stmt := `SELECT * FROM content_items WHERE source_id = $1`
-	rows, err := db.Query(stmt, src.ID)
+	stmt := `SELECT * FROM content_items WHERE source_id = $1 ORDER BY published DESC`
+	return db.listContentItemsByQuery(stmt, src.ID)
+}
+
+func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model.ContentItem, error) {
+	rows, err := db.Query(stmt, args...)
 	defer rows.Close()
 	if err != nil {
-		log.Error("Error selecting content items by source from db. err: ", err)
+		log.Error("Error selecting content items from db. err: ", err)
 		return nil, err
 	}
 	contentItems := make([]*model.ContentItem, 0)
@@ -121,7 +125,7 @@ func (db DB) ListContentItemsBySource(src *model.SrcRSSFeed) ([]*model.ContentIt
 		contentItems = append(contentItems, &contentItem)
 	}
 	if err := rows.Err(); err != nil {
-		log.Error("error while retrieving content items by source. err: ", err)
+		log.Error("error while retrieving content items. err: ", err)
 		return nil, err
 	}
 	return contentItems, nil
