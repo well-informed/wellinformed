@@ -30,17 +30,12 @@ type ContentItemConnectionInput struct {
 }
 
 type ContentItemEdge struct {
-	Node   *ContentItemNode `json:"node"`
-	Cursor string           `json:"cursor"`
+	Node   *ContentItem `json:"node"`
+	Cursor string       `json:"cursor"`
 }
 
 type ContentItemInteractionsInput struct {
 	UserID *int64 `json:"userID"`
-}
-
-type ContentItemNode struct {
-	Value *ContentItem `json:"value"`
-	ID    int64        `json:"id"`
 }
 
 type ContentItemPageInfo struct {
@@ -71,8 +66,8 @@ type InteractionConnectionInput struct {
 }
 
 type InteractionEdge struct {
-	Node   *InteractionNode `json:"node"`
-	Cursor string           `json:"cursor"`
+	Node   *Interaction `json:"node"`
+	Cursor string       `json:"cursor"`
 }
 
 type InteractionInput struct {
@@ -81,11 +76,6 @@ type InteractionInput struct {
 	Completed     *bool     `json:"completed"`
 	SavedForLater *bool     `json:"savedForLater"`
 	PercentRead   *float64  `json:"percentRead"`
-}
-
-type InteractionNode struct {
-	Value *Interaction `json:"value"`
-	ID    int64        `json:"id"`
 }
 
 type InteractionPageInfo struct {
@@ -130,19 +120,14 @@ type SrcRSSFeedConnectionInput struct {
 }
 
 type SrcRSSFeedEdge struct {
-	Node   *SrcRSSFeedNode `json:"node"`
-	Cursor string          `json:"cursor"`
+	Node   *SrcRSSFeed `json:"node"`
+	Cursor string      `json:"cursor"`
 }
 
 type SrcRSSFeedInput struct {
 	ID       *int64  `json:"id"`
 	Link     *string `json:"link"`
 	FeedLink *string `json:"feedLink"`
-}
-
-type SrcRSSFeedNode struct {
-	Value *SrcRSSFeed `json:"value"`
-	ID    int64       `json:"id"`
 }
 
 type SrcRSSFeedPageInfo struct {
@@ -169,13 +154,8 @@ type UserSubscriptionConnectionInput struct {
 }
 
 type UserSubscriptionEdge struct {
-	Node   *UserSubscriptionNode `json:"node"`
-	Cursor string                `json:"cursor"`
-}
-
-type UserSubscriptionNode struct {
-	Value *UserSubscription `json:"value"`
-	ID    int64             `json:"id"`
+	Node   *UserSubscription `json:"node"`
+	Cursor string            `json:"cursor"`
 }
 
 type UserSubscriptionPageInfo struct {

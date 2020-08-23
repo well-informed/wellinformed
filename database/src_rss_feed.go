@@ -82,8 +82,6 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 }
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
-	//Need to write this manually now...in order to select only the fields from the first table
-	//Maybe there's a way to only select some fields?
 	stmt := `SELECT src_rss_feeds.*
 	FROM src_rss_feeds
 	INNER JOIN user_subscriptions

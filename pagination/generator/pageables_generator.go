@@ -62,7 +62,7 @@ import (
 {{print ""}}
 {{- range .Types }}
 func Build{{.}}Page(first int, after *string, list []*model.{{.}}) (*model.{{.}}Connection, error) {
-	edges := __{{.}}__nodesToEdges(__{{.}}__listToNodes(list))
+	edges := __{{.}}__listToEdges(list)
 	if after != nil {
 		for i := 0; i < len(edges); i++ {
 			if *after == edges[i].Cursor {
@@ -92,26 +92,15 @@ func Build{{.}}Page(first int, after *string, list []*model.{{.}}) (*model.{{.}}
 	}, nil
 }
 {{print ""}}
-func __{{.}}__nodesToEdges(nodes []*model.{{.}}Node) []*model.{{.}}Edge {
+func __{{.}}__listToEdges(list []*model.{{.}}) []*model.{{.}}Edge {
 	edges := make([]*model.{{.}}Edge, 0)
-	for _, node := range nodes {
+	for _, item := range list {
 		edges = append(edges, &model.{{.}}Edge{
-			Node:   node,
-			Cursor: b64.StdEncoding.EncodeToString([]byte(string(node.ID))),
+			Node:   item,
+			Cursor: b64.StdEncoding.EncodeToString([]byte(string(item.ID))),
 		})
 	}
 	return edges
-}
-{{print ""}}
-func __{{.}}__listToNodes(list []*model.{{.}}) []*model.{{.}}Node {
-	nodes := make([]*model.{{.}}Node, 0)
-	for _, item := range list {
-		nodes = append(nodes, &model.{{.}}Node{
-			Value: item,
-			ID:    item.ID,
-		})
-	}
-	return nodes
 }
 {{print ""}}
 {{- end }}

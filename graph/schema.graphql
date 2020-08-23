@@ -176,12 +176,8 @@ type ContentItemPageInfo {
   endCursor: String!
 }
 type ContentItemEdge {
-  node: ContentItemNode!
+  node: ContentItem!
   cursor: String!
-}
-type ContentItemNode {
-  value: ContentItem!
-  id: ID!
 }
 
 # Pageable Interface for UserSubscription
@@ -200,12 +196,8 @@ type UserSubscriptionPageInfo {
   endCursor: String!
 }
 type UserSubscriptionEdge {
-  node: UserSubscriptionNode!
+  node: UserSubscription!
   cursor: String!
-}
-type UserSubscriptionNode {
-  value: UserSubscription!
-  id: ID!
 }
 
 # Pageable Interface for SrcRSSFeed
@@ -224,12 +216,8 @@ type SrcRSSFeedPageInfo {
   endCursor: String!
 }
 type SrcRSSFeedEdge {
-  node: SrcRSSFeedNode!
+  node: SrcRSSFeed!
   cursor: String!
-}
-type SrcRSSFeedNode {
-  value: SrcRSSFeed!
-  id: ID!
 }
 
 # Pageable Interface for Interactions
@@ -248,12 +236,8 @@ type InteractionPageInfo {
   endCursor: String!
 }
 type InteractionEdge {
-  node: InteractionNode!
+  node: Interaction!
   cursor: String!
-}
-type InteractionNode {
-  value: Interaction!
-  id: ID!
 }
 
 type Query {
