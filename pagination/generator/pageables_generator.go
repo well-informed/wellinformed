@@ -63,6 +63,10 @@ import (
 {{- range .Types }}
 func Build{{.}}Page(first int, after *string, list []*model.{{.}}) (*model.{{.}}Connection, error) {
 	edges := __{{.}}__listToEdges(list)
+	info := &model.{{.}}PageInfo{
+		HasPreviousPage: len(edges) > 0 && after != nil,
+		HasNextPage:     len(edges) > first,
+	}
 	if after != nil {
 		for i := 0; i < len(edges); i++ {
 			if *after == edges[i].Cursor {
@@ -80,12 +84,8 @@ func Build{{.}}Page(first int, after *string, list []*model.{{.}}) (*model.{{.}}
 	} else if first < len(edges) {
 		edges = edges[:first]
 	}
-	info := &model.{{.}}PageInfo{
-		HasPreviousPage: len(edges) > 0 && after != nil,
-		HasNextPage:     len(edges) > first,
-		StartCursor:     edges[0].Cursor,
-		EndCursor:       edges[len(edges)-1].Cursor,
-	}
+	info.StartCursor = edges[0].Cursor
+	info.EndCursor = edges[len(edges)-1].Cursor
 	return &model.{{.}}Connection{
 		Edges:    edges,
 		PageInfo: info,
