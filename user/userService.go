@@ -70,7 +70,7 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 	if err != nil {
 		log.Error("could not create default preference set for user. err: ", err)
 	}
-
+	//TODO: Create and set active User Feed
 	token, err := auth.GenAccessToken(createdUser.ID)
 	if err != nil {
 		log.Printf("error while generating the token: %v", err)

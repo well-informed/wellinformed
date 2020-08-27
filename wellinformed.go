@@ -35,7 +35,7 @@ type Persistor interface {
 	UpdateUser(user model.User) (model.User, error)
 
 	// Engine Functions
-	SaveEngine(prefSet *model.Engine) (*model.Engine, error)
+	SaveEngine(engine *model.Engine) (*model.Engine, error)
 	ListEnginesByUser(userID int64) ([]*model.Engine, error)
 	GetEngineByID(id int64) (*model.Engine, error)
 	GetEngineByName(userID int64, name string) (*model.Engine, error)

@@ -21,7 +21,7 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 }
 
 func (f feedService) Serve(ctx context.Context, user *model.User) (*model.UserFeed, error) {
-	prefSet, err := f.db.GetEngineByName(user.ID, user.ActiveEngineName)
+	engine, err := f.db.GetEngineByName(user.ID, user.ActiveEngineName)
 	if err != nil {
 		return nil, errors.New("could not find user preference set")
 	}
@@ -31,10 +31,11 @@ func (f feedService) Serve(ctx context.Context, user *model.User) (*model.UserFe
 		return nil, err
 	}
 
-	contentItems, err := f.db.ServeContentItems(userSources, prefSet.Sort, prefSet.StartDate, prefSet.EndDate)
+	contentItems, err := f.db.ServeContentItems(userSources, engine.Sort, engine.StartDate, engine.EndDate)
 	if err != nil {
 		log.Error("could not serve feed. err: ", err)
 	}
+	//TODO: Accept page input to fill this out properly
 	contentItemsPage, err := pagination.BuildContentItemPage(100, nil, contentItems)
 	if err != nil {
 		log.Error("could not build contentItemsPage in order to serve feed. err: ", err)

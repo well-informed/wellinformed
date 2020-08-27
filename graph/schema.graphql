@@ -41,12 +41,7 @@ type Engine {
 }
 
 input EngineInput {
-    name: String!
-  """
-  true sets the entered engine as active, false never has any effect.
-  A prefSet can only become inactive if another prefSet is set to active
-  """
-  activate: Boolean!
+  name: String!
   sort: sortType!
   startDate: Time
   endDate: Time
