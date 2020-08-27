@@ -52,7 +52,7 @@ var prodConfig = Config{
 	DBName:               "edyn",
 	DBUser:               "edyn",
 	DBPassword:           "MPyDqCs4NCcCRe",
-	DBMaxOpenConnections: 50,
+	DBMaxOpenConnections: 500,
 	DBMaxIdleConnections: 10,
 	LogLevel:             log.InfoLevel,
 }
