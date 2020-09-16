@@ -6,12 +6,14 @@ import (
 )
 
 type Config struct {
-	ServerPort string    `split_words:"true"`
-	DBHost     string    `split_words:"true"`
-	DBName     string    `split_words:"true"`
-	DBUser     string    `split_words:"true"`
-	DBPassword string    `split_words:"true"`
-	LogLevel   log.Level `split_words:"true"`
+	ServerPort           string `split_words:"true"`
+	DBHost               string `split_words:"true"`
+	DBName               string `split_words:"true"`
+	DBUser               string `split_words:"true"`
+	DBPassword           string `split_words:"true"`
+	DBMaxOpenConnections int
+	DBMaxIdleConnections int
+	LogLevel             log.Level `split_words:"true"`
 }
 
 type Env struct {
@@ -36,12 +38,14 @@ func GetConfig() Config {
 }
 
 var devConfig = Config{
-	ServerPort: "8080",
-	DBHost:     "localhost",
-	DBName:     "postgres",
-	DBUser:     "postgres",
-	DBPassword: "password",
-	LogLevel:   log.DebugLevel,
+	ServerPort:           "8080",
+	DBHost:               "localhost",
+	DBName:               "postgres",
+	DBUser:               "postgres",
+	DBPassword:           "password",
+	DBMaxOpenConnections: 50,
+	DBMaxIdleConnections: 10,
+	LogLevel:             log.DebugLevel,
 }
 
 var unitTestConfig = Config{
@@ -54,10 +58,12 @@ var unitTestConfig = Config{
 }
 
 var prodConfig = Config{
-	ServerPort: "80",
-	DBHost:     "edyn.c7xblzysdvfi.us-east-2.rds.amazonaws.com",
-	DBName:     "edyn",
-	DBUser:     "edyn",
-	DBPassword: "MPyDqCs4NCcCRe",
-	LogLevel:   log.InfoLevel,
+	ServerPort:           "80",
+	DBHost:               "edyn.c7xblzysdvfi.us-east-2.rds.amazonaws.com",
+	DBName:               "edyn",
+	DBUser:               "edyn",
+	DBPassword:           "MPyDqCs4NCcCRe",
+	DBMaxOpenConnections: 500,
+	DBMaxIdleConnections: 10,
+	LogLevel:             log.InfoLevel,
 }

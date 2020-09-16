@@ -26,6 +26,8 @@ func NewDB(conf wellinformed.Config) DB {
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
+	db.DB.SetMaxOpenConns(conf.DBMaxOpenConnections)
+	db.DB.SetMaxIdleConns(conf.DBMaxIdleConnections)
 	migrateSchema(connStr)
 	return DB{db}
 }
