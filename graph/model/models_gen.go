@@ -16,6 +16,8 @@ type Feed interface {
 type AddSourceInput struct {
 	// the ID of the feed you want to subscribe to
 	SourceFeedID int64 `json:"sourceFeedID"`
+	// The source's __typename value
+	SourceType SourceType `json:"sourceType"`
 	// the ID of the feed that is subscribing to the source. defaults to the active feed
 	TargetFeedID *int64 `json:"targetFeedID"`
 }
@@ -67,10 +69,7 @@ type DeleteResponse struct {
 }
 
 type EngineInput struct {
-	Name string `json:"name"`
-	// true sets the entered engine as active, false never has any effect.
-	// A prefSet can only become inactive if another prefSet is set to active
-	Activate  bool       `json:"activate"`
+	Name      string     `json:"name"`
 	Sort      SortType   `json:"sort"`
 	StartDate *time.Time `json:"startDate"`
 	EndDate   *time.Time `json:"endDate"`
@@ -154,20 +153,6 @@ type SrcRSSFeedPageInfo struct {
 	EndCursor       string `json:"endCursor"`
 }
 
-type UserFeed struct {
-	ID           int64                  `json:"id"`
-	UserID       int64                  `json:"userID"`
-	User         *User                  `json:"user"`
-	Title        string                 `json:"title"`
-	Name         string                 `json:"name"`
-	ContentItems *ContentItemConnection `json:"contentItems"`
-	Sources      []Feed                 `json:"sources"`
-	Engine       *Engine                `json:"engine"`
-	IsActive     bool                   `json:"isActive"`
-}
-
-func (UserFeed) IsFeed() {}
-
 type UserInteractionsInput struct {
 	ReadState *ReadState `json:"readState"`
 }
@@ -236,6 +221,49 @@ func (e *ReadState) UnmarshalGQL(v interface{}) error {
 }
 
 func (e ReadState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type SourceType string
+
+const (
+	SourceTypeUnknown    SourceType = "Unknown"
+	SourceTypeSrcRSSFeed SourceType = "SrcRSSFeed"
+	SourceTypeUserFeed   SourceType = "UserFeed"
+)
+
+var AllSourceType = []SourceType{
+	SourceTypeUnknown,
+	SourceTypeSrcRSSFeed,
+	SourceTypeUserFeed,
+}
+
+func (e SourceType) IsValid() bool {
+	switch e {
+	case SourceTypeUnknown, SourceTypeSrcRSSFeed, SourceTypeUserFeed:
+		return true
+	}
+	return false
+}
+
+func (e SourceType) String() string {
+	return string(e)
+}
+
+func (e *SourceType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SourceType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SourceType", str)
+	}
+	return nil
+}
+
+func (e SourceType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

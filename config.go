@@ -25,6 +25,8 @@ func GetConfig() Config {
 	envconfig.MustProcess("wellinformed", &env)
 	if env.Env == "production" {
 		conf = prodConfig
+	} else if env.Env == "unittest" {
+		conf = unitTestConfig
 	} else {
 		conf = devConfig
 	}
@@ -37,6 +39,15 @@ var devConfig = Config{
 	ServerPort: "8080",
 	DBHost:     "localhost",
 	DBName:     "postgres",
+	DBUser:     "postgres",
+	DBPassword: "password",
+	LogLevel:   log.DebugLevel,
+}
+
+var unitTestConfig = Config{
+	ServerPort: "8081",
+	DBHost:     "localhost",
+	DBName:     "unittest",
 	DBUser:     "postgres",
 	DBPassword: "password",
 	LogLevel:   log.DebugLevel,

@@ -21,30 +21,33 @@ func NewUserService(db wellinformed.Persistor) *UserService {
 	}
 }
 
-func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
-	existingUser, err := u.db.GetUserByEmail(input.Email)
-
+func (u *UserService) userExists(email string, username string) (bool, error) {
+	existingUser, err := u.db.GetUserByEmail(email)
 	if err != nil {
-		return nil, err
+		return true, err
 	}
-
 	if existingUser != nil {
 		log.Printf("error while GetUserByEmail: %v", err)
-		return nil, errors.New("email already in used")
+		return true, errors.New("email already in used")
 	}
 
-	existingUser, err = u.db.GetUserByUsername(input.Username)
-
+	existingUser, err = u.db.GetUserByUsername(username)
+	if err != nil {
+		return true, err
+	}
 	if existingUser != nil {
-		return nil, errors.New("username already in used")
+		return true, errors.New("username already in used")
 	}
 
+	return false, nil
+}
+
+func (u *UserService) newUser(input model.RegisterInput) (*model.User, error) {
 	user := &model.User{
-		Username:         input.Username,
-		Email:            input.Email,
-		Firstname:        input.Firstname,
-		Lastname:         input.Lastname,
-		ActiveEngineName: "default",
+		Username:  input.Username,
+		Email:     input.Email,
+		Firstname: input.Firstname,
+		Lastname:  input.Lastname,
 	}
 
 	hashedPassword, err := auth.HashPassword(input.Password)
@@ -55,22 +58,53 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 
 	user.Password = hashedPassword
 
+	return user, nil
+}
+
+func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error) {
+	if exists, err := u.userExists(input.Email, input.Username); exists {
+		return nil, err
+	}
+
+	user, err := u.newUser(input)
+	if err != nil {
+		return nil, err
+	}
+
 	//TODO wrap these two statements in a transaction
+	//Transaction starts here
+
 	createdUser, err := u.db.CreateUser(*user)
 	if err != nil {
 		log.Printf("error creating a user: %v", err)
 		return nil, err
 	}
 
-	_, err = u.db.SaveEngine(&model.Engine{
+	engine, err := u.db.SaveEngine(&model.Engine{
 		UserID: createdUser.ID,
 		Name:   "default",
 		Sort:   model.SortTypeChronological,
 	})
 	if err != nil {
-		log.Error("could not create default preference set for user. err: ", err)
+		log.Error("could not create default engine for user. err: ", err)
+		return nil, err
 	}
-	//TODO: Create and set active User Feed
+
+	userFeed, err := u.db.CreateUserFeed(&model.UserFeed{
+		UserID:   createdUser.ID,
+		EngineID: engine.ID,
+		Title:    "default",
+		Name:     "default",
+	})
+
+	createdUser.ActiveUserFeedID = userFeed.ID
+	log.Debugf("user object: %+v", createdUser)
+	createdUser, err = u.db.UpdateUser(createdUser)
+	if err != nil {
+		log.Error("could not save active user feed on new user. err: ", err)
+		return nil, err
+	}
+
 	token, err := auth.GenAccessToken(createdUser.ID)
 	if err != nil {
 		log.Printf("error while generating the token: %v", err)
@@ -130,12 +164,6 @@ func (u *UserService) SaveEngine(ctx context.Context, input *model.EngineInput) 
 	if err != nil {
 		log.Error("couldn't update Engine. err: ", err)
 		return nil, err
-	}
-	if input.Activate == true {
-		if user.ActiveEngineName != updatedPrefSet.Name {
-			user.ActiveEngineName = updatedPrefSet.Name
-			u.db.UpdateUser(*user)
-		}
 	}
 
 	return updatedPrefSet, nil

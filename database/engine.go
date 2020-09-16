@@ -7,7 +7,6 @@ import (
 
 //Creates a new of updates an existing Engine, attaching the id found in the database
 func (db DB) SaveEngine(engine *model.Engine) (*model.Engine, error) {
-	log.Debugf("engine: %+v", engine)
 	stmt, err := db.Prepare(`INSERT into engines
 	( user_id,
 		name,
@@ -48,7 +47,7 @@ func (db DB) GetEngineByID(id int64) (*model.Engine, error) {
 	var engine model.Engine
 	err := db.Get(&engine, "SELECT * FROM engines WHERE id = $1", id)
 	if err != nil {
-		log.Error("failed to get Engine by id. err: ", err)
+		log.Errorf("failed to get engine by id: %v err: %v", id, err)
 		return nil, err
 	}
 	return &engine, nil

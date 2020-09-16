@@ -16,6 +16,10 @@ import (
 	page "github.com/well-informed/wellinformed/pagination"
 )
 
+func (r *contentItemResolver) SourceType(ctx context.Context, obj *model.ContentItem) (string, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.ContentItem, input *model.ContentItemInteractionsInput) (*model.Interaction, error) {
 	var userIdToUse int64
 
@@ -41,6 +45,21 @@ func (r *engineResolver) User(ctx context.Context, obj *model.Engine) (*model.Us
 	return r.DB.GetUserByID(obj.UserID)
 }
 
+func (r *feedSubscriptionResolver) UserFeed(ctx context.Context, obj *model.FeedSubscription) (*model.UserFeed, error) {
+	return r.DB.GetUserFeedByID(obj.UserFeedID)
+}
+
+func (r *feedSubscriptionResolver) Source(ctx context.Context, obj *model.FeedSubscription) (model.Feed, error) {
+	if obj.SourceType == model.SourceTypeSrcRSSFeed {
+		//TODO: Fix GetSrcRSSFeed to require one value instead of an input struct
+		input := model.SrcRSSFeedInput{ID: &obj.SourceID}
+		return r.DB.GetSrcRSSFeed(input)
+	} else if obj.SourceType == model.SourceTypeUserFeed {
+		return r.DB.GetUserFeedByID(obj.SourceID)
+	}
+	return nil, errors.New("sourceType not recognized")
+}
+
 func (r *interactionResolver) User(ctx context.Context, obj *model.Interaction) (*model.User, error) {
 	return r.DB.GetUserByInteraction(obj.ID)
 }
@@ -50,8 +69,35 @@ func (r *interactionResolver) ContentItem(ctx context.Context, obj *model.Intera
 }
 
 func (r *mutationResolver) AddUserFeed(ctx context.Context, input model.AddUserFeedInput) (*model.UserFeed, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	newEngine := &model.Engine{
+		UserID: user.ID,
+		Name:   input.Name,
+		Sort:   model.SortTypeChronological,
+	}
+
+	savedEngine, err := r.DB.SaveEngine(newEngine)
+	if err != nil {
+		log.Error("couldn't create new engine for new user feed. err: ", err)
+		return nil, err
+	}
 	//Adding without cloning engine or source list for a start...
-	return nil, errors.New("not implemented")
+	userFeed := &model.UserFeed{
+		UserID:   user.ID,
+		EngineID: savedEngine.ID,
+		Title:    input.Name,
+		Name:     input.Name,
+	}
+	createdUserFeed, err := r.DB.CreateUserFeed(userFeed)
+	if err != nil {
+		log.Error("could not create new userFeed. err: ", err)
+		return nil, err
+	}
+	return createdUserFeed, nil
 }
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
@@ -96,14 +142,35 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	return insertedFeed, nil
 }
 
-func (r *mutationResolver) AddSource(ctx context.Context, input model.AddSourceInput) (model.Feed, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) AddSource(ctx context.Context, input model.AddSourceInput) (*model.FeedSubscription, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	//TODO: Go back and handle concept of UserSubscription
+	//If target feed is not supplied explicitly get the user's active feed
+	var feedSubscription *model.FeedSubscription
+	if input.TargetFeedID == nil {
+		targetFeed, err := r.DB.GetUserFeedByID(user.ActiveUserFeedID)
+		if err != nil {
+			return nil, err
+		}
+		input.TargetFeedID = &targetFeed.ID
+	}
+
+	//Record Feed subscription
+	feedSubscription, err = r.DB.CreateFeedSubscription(*input.TargetFeedID, input.SourceFeedID, input.SourceType)
+	if err != nil {
+		return nil, err
+	}
+
+	return feedSubscription, nil
 }
 
 func (r *mutationResolver) DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
-		return nil, errors.New("Something went wrong")
+		return nil, err
 	}
 	numDeleted, err := r.DB.DeleteUserSubscription(user.ID, srcRssfeedID)
 	if err != nil {
@@ -179,7 +246,12 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 		return nil, errors.New("you are not signed in")
 	}
 	log.Printf("currentUser: %v", currentUser)
-	return r.FeedService.Serve(ctx, currentUser)
+	activeFeed, err := r.DB.GetUserFeedByID(currentUser.ActiveUserFeedID)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("retrieved UserFeed as active: %+v", activeFeed)
+	return activeFeed, nil
 }
 
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
@@ -243,7 +315,7 @@ func (r *queryResolver) Engines(ctx context.Context) ([]*model.Engine, error) {
 	return r.DB.ListEnginesByUser(user.ID)
 }
 
-func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ContentItemConnectionInput) (*model.ContentItemConnection, error) {
+func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input model.ContentItemConnectionInput) (*model.ContentItemConnection, error) {
 	items, err := r.DB.ListContentItemsBySource(obj)
 	if err != nil {
 		return nil, err
@@ -271,7 +343,8 @@ func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFe
 }
 
 func (r *userResolver) Feeds(ctx context.Context, obj *model.User) ([]*model.UserFeed, error) {
-	panic(fmt.Errorf("not implemented"))
+	//TODO: paginate
+	return r.DB.ListUserFeedsByUser(obj.ID)
 }
 
 func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.SrcRSSFeedConnectionInput) (*model.SrcRSSFeedConnection, error) {
@@ -284,10 +357,6 @@ func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *
 
 func (r *userResolver) Engines(ctx context.Context, obj *model.User) ([]*model.Engine, error) {
 	return r.DB.ListEnginesByUser(obj.ID)
-}
-
-func (r *userResolver) ActiveEngine(ctx context.Context, obj *model.User) (*model.Engine, error) {
-	return r.DB.GetEngineByName(obj.ID, obj.ActiveEngineName)
 }
 
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User, input *model.UserSubscriptionConnectionInput) (*model.UserSubscriptionConnection, error) {
@@ -313,6 +382,38 @@ func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readSt
 		return nil, err
 	}
 	return page.BuildInteractionPage(input.First, input.After, interactions)
+}
+
+func (r *userFeedResolver) User(ctx context.Context, obj *model.UserFeed) (*model.User, error) {
+	return r.DB.GetUserByID(obj.UserID)
+}
+
+func (r *userFeedResolver) ContentItems(ctx context.Context, obj *model.UserFeed, input model.ContentItemConnectionInput) (*model.ContentItemConnection, error) {
+	contentItems, err := r.FeedService.ServeContent(ctx, obj)
+	if err != nil {
+		return nil, err
+	}
+	//Set default value due to nil panic when 0 is passed to pager
+	return page.BuildContentItemPage(input.First, input.After, contentItems)
+}
+
+func (r *userFeedResolver) Subscriptions(ctx context.Context, obj *model.UserFeed) ([]*model.FeedSubscription, error) {
+	return r.DB.ListFeedSubscriptionsByFeedID(obj.ID)
+}
+
+func (r *userFeedResolver) Engine(ctx context.Context, obj *model.UserFeed) (*model.Engine, error) {
+	return r.DB.GetEngineByID(obj.EngineID)
+}
+
+func (r *userFeedResolver) IsActive(ctx context.Context, obj *model.UserFeed) (bool, error) {
+	user, err := r.DB.GetUserByID(obj.UserID)
+	if err != nil {
+		return false, err
+	}
+	if user.ActiveUserFeedID == obj.ID {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
@@ -341,6 +442,11 @@ func (r *Resolver) ContentItem() generated.ContentItemResolver { return &content
 // Engine returns generated.EngineResolver implementation.
 func (r *Resolver) Engine() generated.EngineResolver { return &engineResolver{r} }
 
+// FeedSubscription returns generated.FeedSubscriptionResolver implementation.
+func (r *Resolver) FeedSubscription() generated.FeedSubscriptionResolver {
+	return &feedSubscriptionResolver{r}
+}
+
 // Interaction returns generated.InteractionResolver implementation.
 func (r *Resolver) Interaction() generated.InteractionResolver { return &interactionResolver{r} }
 
@@ -356,6 +462,9 @@ func (r *Resolver) SrcRSSFeed() generated.SrcRSSFeedResolver { return &srcRSSFee
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
+// UserFeed returns generated.UserFeedResolver implementation.
+func (r *Resolver) UserFeed() generated.UserFeedResolver { return &userFeedResolver{r} }
+
 // UserSubscription returns generated.UserSubscriptionResolver implementation.
 func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 	return &userSubscriptionResolver{r}
@@ -363,9 +472,11 @@ func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 
 type contentItemResolver struct{ *Resolver }
 type engineResolver struct{ *Resolver }
+type feedSubscriptionResolver struct{ *Resolver }
 type interactionResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
+type userFeedResolver struct{ *Resolver }
 type userSubscriptionResolver struct{ *Resolver }

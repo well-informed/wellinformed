@@ -2,7 +2,7 @@ scalar Time
 
 interface Feed {
   title: String!
-  contentItems(input: ContentItemConnectionInput): ContentItemConnection!
+  contentItems(input: ContentItemConnectionInput!): ContentItemConnection!
 }
 
 type SrcRSSFeed implements Feed {
@@ -15,7 +15,7 @@ type SrcRSSFeed implements Feed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  contentItems(input: ContentItemConnectionInput): ContentItemConnection!
+  contentItems(input: ContentItemConnectionInput!): ContentItemConnection!
   isSubscribed: Boolean!
 }
 
@@ -25,10 +25,16 @@ type UserFeed implements Feed {
   user: User!
   title: String!
   name: String!
-  contentItems(input: ContentItemConnectionInput): ContentItemConnection!
-  sources: [Feed!]
+  contentItems(input: ContentItemConnectionInput!): ContentItemConnection!
+  subscriptions: [FeedSubscription!]
   engine: Engine!
   isActive: Boolean!
+}
+
+enum SourceType {
+  Unknown
+  SrcRSSFeed
+  UserFeed
 }
 
 type Engine {
@@ -87,6 +93,14 @@ type UserSubscription {
   createdAt: Time!
 }
 
+type FeedSubscription {
+  id: ID!
+  userFeed: UserFeed!
+  source: Feed!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
 input UserInteractionsInput {
   readState: ReadState
 }
@@ -102,7 +116,6 @@ type User {
   feeds: [UserFeed!]!
   srcRSSFeeds(input: SrcRSSFeedConnectionInput): SrcRSSFeedConnection!
   engines: [Engine!]!
-  activeEngine: Engine!
   createdAt: Time!
   updatedAt: Time!
   subscriptions(input: UserSubscriptionConnectionInput): UserSubscriptionConnection!
@@ -175,6 +188,10 @@ input AddSourceInput {
   the ID of the feed you want to subscribe to
   """
   sourceFeedID: ID!
+  """
+  The source's __typename value
+  """
+  sourceType: SourceType!
   """
   the ID of the feed that is subscribing to the source. defaults to the active feed
   """
@@ -285,7 +302,7 @@ type DeleteResponse {
 type Mutation {
   addUserFeed(input: AddUserFeedInput!): UserFeed!
   addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
-  addSource(input: AddSourceInput!): Feed!
+  addSource(input: AddSourceInput!): FeedSubscription!
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!

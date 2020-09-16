@@ -15,17 +15,7 @@ func (db DB) getUserByField(selection string, whereClause string, args ...interf
 	s := []string{"SELECT", selection, "FROM users WHERE", whereClause}
 	stmt := strings.Join(s, " ")
 
-	err := db.QueryRow(stmt, args...).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Firstname,
-		&user.Lastname,
-		&user.Username,
-		&user.Password,
-		&user.ActiveEngineName,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
+	err := db.Get(&user, stmt, args...)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -53,7 +43,7 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 		last_name,
 		user_name,
 		password,
-		active_preference_set,
+		active_user_feed,
 		created_at,
 		updated_at)
 		values($1,$2,$3,$4,$5,$6,$7,$8)
@@ -71,7 +61,7 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 		user.Lastname,
 		user.Username,
 		user.Password,
-		user.ActiveEngineName,
+		user.ActiveUserFeedID,
 		time.Now(),
 		time.Now(),
 	).Scan(&ID)
@@ -85,34 +75,30 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 }
 
 func (db DB) UpdateUser(user model.User) (model.User, error) {
-	stmt, err := db.Prepare(`UPDATE users SET
+	stmt := `UPDATE users SET
 	email = $1,
 	first_name = $2,
 	last_name = $3,
 	user_name = $4,
 	password = $5,
-	active_preference_set = $6,
-	updated_at = $7`)
-	if err != nil {
-		log.Error("failed ot prepare update user: err: ", err)
-		return user, err
-	}
+	active_user_feed = $6,
+	updated_at = $7
+	WHERE id = $8
+	RETURNING updated_at`
 
-	var ID int64
-	err = stmt.QueryRow(
+	err := db.QueryRowx(stmt,
 		user.Email,
 		user.Firstname,
 		user.Lastname,
 		user.Username,
 		user.Password,
-		user.ActiveEngineName,
+		user.ActiveUserFeedID,
 		time.Now(),
-	).Scan(&ID)
+		user.ID).Scan(&user.UpdatedAt)
 	if err != nil {
 		log.Error("failed to update user: err: ", err)
 		return user, err
 	}
-	user.ID = ID
 	return user, nil
 }
 
@@ -133,7 +119,7 @@ func (db DB) GetUserByInteraction(interactionId int64) (*model.User, error) {
 		&user.Lastname,
 		&user.Username,
 		&user.Password,
-		&user.ActiveEngineName,
+		&user.ActiveUserFeedID,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)

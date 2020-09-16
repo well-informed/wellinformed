@@ -12,18 +12,24 @@ import (
 	"github.com/well-informed/wellinformed"
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
+	"github.com/well-informed/wellinformed/feed"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/rss"
 	"github.com/well-informed/wellinformed/subscriber"
 	"github.com/well-informed/wellinformed/user"
-	"github.com/well-informed/wellinformed/userFeed"
 )
 
 const defaultPort = "8080"
 
 func main() {
+	conf, router, _ := initDependencies()
 
+	log.Printf("connect to http://localhost:%s/ for GraphQL playground", conf.ServerPort)
+	log.Fatal(http.ListenAndServe(":"+conf.ServerPort, router))
+}
+
+func initDependencies() (wellinformed.Config, *chi.Mux, *graph.Resolver) {
 	conf := wellinformed.GetConfig()
 
 	log.SetLevel(conf.LogLevel)
@@ -34,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal("couldn't initialize new subscriber properly")
 	}
-	feedService := userFeed.NewFeedService(db)
+	feedService := feed.NewFeedService(db)
 
 	resolver := &graph.Resolver{
 		DB:          db,
@@ -67,7 +73,5 @@ func main() {
 	router.Handle("/query", srv)
 
 	router.Post("/refresh_token", auth.RefreshToken(resolver.DB))
-
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", conf.ServerPort)
-	log.Fatal(http.ListenAndServe(":"+conf.ServerPort, router))
+	return conf, router, resolver
 }
