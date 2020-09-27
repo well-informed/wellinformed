@@ -28,12 +28,12 @@ func NewDB(conf wellinformed.Config) DB {
 	}
 	db.DB.SetMaxOpenConns(conf.DBMaxOpenConnections)
 	db.DB.SetMaxIdleConns(conf.DBMaxIdleConnections)
-	migrateSchema(connStr)
+	MigrateSchema(connStr)
 	return DB{db}
 }
 
 //Handles schema migration by reading binary packed sql files from migrations/bindata.go
-func migrateSchema(dbURL string) {
+func MigrateSchema(dbURL string) {
 	s := bindata.Resource(migrations.AssetNames(),
 		func(name string) ([]byte, error) {
 			return migrations.Asset(name)

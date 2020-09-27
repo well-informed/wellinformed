@@ -23,20 +23,20 @@ func NewTestDB(conf wellinformed.Config) DB {
 	if err != nil {
 		log.Fatal("could not connect to database. err: ", err)
 	}
-	err = defaultDB.QueryRowx("DROP DATABASE unittest").Scan()
+	_, err = defaultDB.Queryx("DROP DATABASE unittest")
 	if err != nil {
-		log.Error(err)
+		log.Error("could not drop unittest database. err:", err)
 	}
-	err = defaultDB.QueryRowx("CREATE DATABASE unittest").Scan()
+	_, err = defaultDB.Queryx("CREATE DATABASE unittest")
 	if err != nil {
-		log.Error(err)
+		log.Error("could not create unittest database. err: ", err)
 	}
 	connStr = fmt.Sprintf(format, conf.DBUser, conf.DBPassword, conf.DBHost, "unittest")
 	db, err := sqlx.Connect("postgres", connStr)
 	if err != nil {
 		log.Error("couldn't connect to unittest db. err: ", err)
 	}
-	migrateSchema(connStr)
+	MigrateSchema(connStr)
 	return DB{db}
 }
 

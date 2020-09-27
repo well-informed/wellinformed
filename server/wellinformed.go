@@ -23,18 +23,18 @@ import (
 const defaultPort = "8080"
 
 func main() {
-	conf, router, _ := initDependencies()
+	conf := wellinformed.GetConfig()
+
+	//Injecting database dependency so test version can be substituted as needed
+	router, _ := initWellinformedApp(conf, database.NewDB(conf))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", conf.ServerPort)
 	log.Fatal(http.ListenAndServe(":"+conf.ServerPort, router))
 }
 
-func initDependencies() (wellinformed.Config, *chi.Mux, *graph.Resolver) {
-	conf := wellinformed.GetConfig()
-
+func initWellinformedApp(conf wellinformed.Config, db database.DB) (*chi.Mux, *graph.Resolver) {
 	log.SetLevel(conf.LogLevel)
 
-	db := database.NewDB(conf)
 	rss := rss.NewRSS()
 	sub, err := subscriber.NewSubscriber(rss, db)
 	if err != nil {
@@ -73,5 +73,5 @@ func initDependencies() (wellinformed.Config, *chi.Mux, *graph.Resolver) {
 	router.Handle("/query", srv)
 
 	router.Post("/refresh_token", auth.RefreshToken(resolver.DB))
-	return conf, router, resolver
+	return router, resolver
 }

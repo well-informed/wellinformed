@@ -17,7 +17,7 @@ gen:
 	go generate ./pagination
 	gqlgen generate
 
-test:
+test: pack-migrations up
 	go test -v ./...
 
 build-prod: pack-migrations

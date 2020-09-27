@@ -70,7 +70,6 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 		return user, err
 	}
 	user.ID = ID
-	log.Info("got id back: ", ID)
 	return user, nil
 }
 

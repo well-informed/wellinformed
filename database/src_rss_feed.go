@@ -42,7 +42,6 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 		return nil, err
 	}
 	feed.ID = id
-	log.Info("got id back: ", id)
 	return &feed, nil
 }
 

@@ -35,7 +35,6 @@ func (db DB) CreateUserFeed(userFeed *model.UserFeed) (*model.UserFeed, error) {
 		return userFeed, err
 	}
 	userFeed.ID = ID
-	log.Info("got id back: ", ID)
 	return userFeed, nil
 }
 
