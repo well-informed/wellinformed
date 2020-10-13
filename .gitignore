@@ -1,5 +1,4 @@
 .vscode/
 wellinformed
 database/migrations/bindata.go
-pagination/pageables_gen.go
 migrations/bindata.go
