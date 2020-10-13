@@ -20,7 +20,7 @@ gen:
 test: pack-migrations up
 	go test -v ./...
 
-build-prod: pack-migrations
+build-prod: pack-migrations gen
 	GOOS=linux go build server/wellinformed.go
 
 pack-migrations:
