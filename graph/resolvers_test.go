@@ -2,111 +2,10 @@ package graph
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	"github.com/jmoiron/sqlx"
-	log "github.com/sirupsen/logrus"
-	"github.com/well-informed/wellinformed"
-	"github.com/well-informed/wellinformed/auth"
-	"github.com/well-informed/wellinformed/database"
-	"github.com/well-informed/wellinformed/feed"
 	"github.com/well-informed/wellinformed/graph/model"
-	"github.com/well-informed/wellinformed/rss"
-	"github.com/well-informed/wellinformed/subscriber"
-	"github.com/well-informed/wellinformed/user"
 )
-
-//Creates a new test harness, including a unique Database for each test that request it.
-//This allows the tests to run in parallel against their own datasets without conflicting with each other.
-//Exercises and depends upon basically all of the real modules except for the server.
-//Namely the subscriber service, database, user service, and feed service
-func NewTestHarness(dbName string) (*Resolver, *sqlx.DB) {
-	conf := wellinformed.Config{
-		ServerPort: "8081",
-		DBHost:     "localhost",
-		DBName:     dbName, //dbname cannot be capitalized
-		DBUser:     "postgres",
-		DBPassword: "password",
-		LogLevel:   log.FatalLevel,
-	}
-	db, sqlxDB := NewTestDB(conf)
-	rssHandler := rss.NewRSS()
-	sub, err := subscriber.NewSubscriber(rssHandler, db)
-	if err != nil {
-		log.Fatal("could not initialize test subscriber. err: ", err)
-	}
-	resolver := &Resolver{
-		DB:          db,
-		RSS:         rssHandler,
-		Sub:         sub,
-		FeedService: feed.NewFeedService(db),
-		UserService: user.NewUserService(db),
-	}
-
-	return resolver, sqlxDB
-}
-
-func NewTestDB(conf wellinformed.Config) (database.DB, *sqlx.DB) {
-	//Connect to default postgres Database
-	format := "postgres://%v:%v@%v:5432/%v?sslmode=disable"
-	connStr := fmt.Sprintf(format, conf.DBUser, conf.DBPassword, conf.DBHost, "postgres")
-	db, err := sqlx.Connect("postgres", connStr)
-	if err != nil {
-		log.Fatal("could not connect to database. err: ", err)
-	}
-	db.DB.SetMaxOpenConns(conf.DBMaxOpenConnections)
-	db.DB.SetMaxIdleConns(conf.DBMaxIdleConnections)
-
-	//With postgres connection, recreate custom test database
-	dropDB := fmt.Sprintf("DROP DATABASE IF EXISTS %v", conf.DBName)
-	createDB := fmt.Sprintf("CREATE DATABASE %v", conf.DBName)
-	_, err = db.Queryx(dropDB)
-	if err != nil {
-		log.Fatal("could not drop database. err: ", err)
-	}
-	_, err = db.Queryx(createDB)
-	if err != nil {
-		log.Fatal("could not create db. err: ", err)
-	}
-
-	//Migrate schema and connect to test database
-	testConnStr := fmt.Sprintf(format, conf.DBUser, conf.DBPassword, conf.DBHost, conf.DBName)
-	db, err = sqlx.Connect("postgres", testConnStr)
-	if err != nil {
-		log.Fatal("could not connect to test database. err: ", err)
-	}
-	database.MigrateSchema(testConnStr)
-	return database.DB{DB: db}, db
-}
-
-func NewMockAuthMiddlewareContext(db wellinformed.Persistor, id int64) context.Context {
-	//Mimic middleware authentication by setting user to key in context.
-	user, err := db.GetUserByID(id)
-	if err != nil {
-		log.Error("could not fetch registered user for mock authentication middleware. err: ", err)
-	}
-	return context.WithValue(context.Background(), auth.CurrentUserKey, user)
-}
-
-func RegisterMutation(resolver *Resolver, input *model.RegisterInput) (*model.AuthResponse, error) {
-	if input == nil {
-		input = &model.RegisterInput{
-			Username:        "deviator",
-			Email:           "danielveenstra@protonmail.com",
-			Password:        "ScoobyDoo69",
-			ConfirmPassword: "ScoobyDoo69",
-			Firstname:       "Dan",
-			Lastname:        "Veenstra",
-		}
-	}
-
-	return resolver.Mutation().Register(context.Background(), *input)
-}
-
-func LoginMutation(resolver *Resolver, input model.LoginInput) (*model.AuthResponse, error) {
-	return resolver.Mutation().Login(context.Background(), input)
-}
 
 func TestRegister(t *testing.T) {
 	resolver, _ := NewTestHarness("register")
@@ -136,9 +35,15 @@ func TestRegisterAndLogin(t *testing.T) {
 	if err != nil {
 		t.Error("couldn't register. err: ", err)
 	}
-	_, err = resolver.Mutation().Login(context.Background(), loginInput)
+	auth, err := resolver.Mutation().Login(context.Background(), loginInput)
 	if err != nil {
 		t.Error("couldn't log in. err: ", err)
+	}
+	if auth.AuthToken == nil {
+		t.Error("auth token should not be nil")
+	}
+	if auth.User.ID == 0 {
+		t.Errorf("userID should be nonzero")
 	}
 }
 
@@ -148,21 +53,120 @@ func TestAddSrcRSSFeed(t *testing.T) {
 	if err != nil {
 		t.Error("could not register. err: ", err)
 	}
+	_, ctx := NewMockAuthenticatedContext(resolver.DB, authResponse.User.ID)
 
-	ctx := NewMockAuthMiddlewareContext(resolver.DB, authResponse.User.ID)
-	input := "https://bankless.substack.com/feed"
-	srcRSSFeed, err := resolver.Mutation().AddSrcRSSFeed(ctx, input)
-	if err != nil {
-		t.Fatal("could not add srcRSSFeed. err: ", err)
-	}
-	if srcRSSFeed.ID == 0 {
-		t.Errorf("missing ID")
-	}
-	if srcRSSFeed.Title == "" {
-		t.Errorf("missing title")
+	srcRSSFeeds, errs := AddStockSrcRSSFeeds(resolver, ctx)
+	for i, srcRSSFeed := range srcRSSFeeds {
+		if errs[i] != nil {
+			t.Fatal("could not add srcRSSFeed. err: ", err)
+		}
+		if srcRSSFeed.ID == 0 {
+			t.Errorf("missing ID")
+		}
+		if srcRSSFeed.Title == "" {
+			t.Errorf("missing title")
+		}
 	}
 }
 
-// func TestAddUserFeed(t *testing.T) {
-// 	_, resolver, _ := NewTestHarness("add_source")
-// }
+func TestAddUserFeed(t *testing.T) {
+	resolver, _, ctx := NewAuthedUserTestEnv("add_user_feed")
+	name := "FEEDME"
+	input := model.AddUserFeedInput{
+		Name: name,
+	}
+	userFeed, err := resolver.Mutation().AddUserFeed(ctx, input)
+	if err != nil {
+		t.Error("error creating new userFeed")
+	}
+	if userFeed.ID == 0 {
+		t.Error("userFeed ID has invalid value 0")
+	}
+	if userFeed.EngineID == 0 {
+		t.Error("userFeed engineID has invalid value 0")
+	}
+	if userFeed.Name != name {
+		t.Errorf("userFeed name should be %v but was %v", name, userFeed.Name)
+	}
+}
+
+func TestAddSource(t *testing.T) {
+	//Register 2 users
+	//Subscribe to a source with User A
+	//Subscribe to User A's new feed with User B
+	resolver, _ := NewTestHarness("add_source")
+	userAEmail := "dude@bro.com"
+	userAPass := "something"
+	userARegisterInput := model.RegisterInput{
+		Username:        "dudebro",
+		Email:           userAEmail,
+		Password:        userAPass,
+		ConfirmPassword: userAPass,
+		Firstname:       "Dude",
+		Lastname:        "Bro",
+	}
+
+	userBEmail := "chick@lady.com"
+	userBPass := "mydogsname"
+	userBRegisterInput := model.RegisterInput{
+		Username:        "chicklady",
+		Email:           userBEmail,
+		Password:        userBPass,
+		ConfirmPassword: userBPass,
+		Firstname:       "Chick",
+		Lastname:        "Lady",
+	}
+	authUserA, err := resolver.Mutation().Register(context.Background(), userARegisterInput)
+	if err != nil {
+		t.Error("couldn't register userA")
+	}
+	_, Actx := NewMockAuthenticatedContext(resolver.DB, authUserA.User.ID)
+	authUserB, err := resolver.Mutation().Register(context.Background(), userBRegisterInput)
+	if err != nil {
+		t.Error("couldn't register userB")
+	}
+	userB, Bctx := NewMockAuthenticatedContext(resolver.DB, authUserB.User.ID)
+
+	cryptoFeed, err := resolver.Mutation().AddSrcRSSFeed(Actx, "https://bankless.substack.com/feed")
+	if err != nil {
+		t.Error("couldn't add src to user A's feed. err: ", err)
+	}
+
+	input := model.AddSourceInput{
+		SourceFeedID: cryptoFeed.ID,
+		SourceType:   model.SourceTypeUserFeed,
+		TargetFeedID: &userB.ActiveUserFeedID, //Problem is this attribute doesn't exist in the graphql schema
+	}
+	BFeedSubsription, err := resolver.Mutation().AddSource(Bctx, input)
+	if err != nil {
+		t.Error("could not add User A's userFeed to active feed. err: ", err)
+	}
+	if BFeedSubsription.ID == 0 {
+		t.Error("B feed subscription had invalid value 0")
+	}
+	if BFeedSubsription.SourceID != cryptoFeed.ID {
+		t.Errorf("subscription source ID %v does not equal intended source ID %v", BFeedSubsription.SourceID, cryptoFeed.ID)
+	}
+	//Get content from feed, make sure it includes original srcRSSFeed
+	userFeed, err := resolver.Query().UserFeed(Bctx)
+	if err != nil {
+		t.Error("could not get User B's userFeed. err: ", err)
+	}
+	contentItemConnInput := model.ContentItemConnectionInput{
+		First: 10,
+	}
+	contentItemConn, err := resolver.UserFeed().ContentItems(Bctx, userFeed, contentItemConnInput)
+	if err != nil {
+		t.Error("could not serve user's content items. err: ", err)
+	}
+	if len(contentItemConn.Edges) == 0 {
+		t.Errorf("contentItemConnections is empty")
+	} else {
+		//Check that served content item came from original srcRSSFeed
+		contentSourceID := contentItemConn.Edges[0].Node.SourceID
+		if contentSourceID != cryptoFeed.ID {
+			t.Errorf("served content source ID %v did not equal original added ID %v", contentSourceID, cryptoFeed.ID)
+		}
+	}
+
+}

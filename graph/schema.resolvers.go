@@ -245,7 +245,7 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 		log.Errorf("error while getting user feed: %v", err)
 		return nil, errors.New("you are not signed in")
 	}
-	log.Printf("currentUser: %v", currentUser)
+	log.Debugf("fetching currentUser %v userFeed", currentUser)
 	activeFeed, err := r.DB.GetUserFeedByID(currentUser.ActiveUserFeedID)
 	if err != nil {
 		return nil, err

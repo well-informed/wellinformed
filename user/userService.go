@@ -120,10 +120,10 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 func (u *UserService) Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error) {
 	// log.Printf("context: %v", ctx)
 	existingUser, err := u.db.GetUserByEmail(input.Email)
-	log.Printf("existingUser: %v", existingUser)
+	log.Debugf("existingUser: %v", existingUser)
 
 	if existingUser == nil || err != nil {
-		log.Printf("GetUserByEmail err: %v", err)
+		log.Debugf("GetUserByEmail err: %v", err)
 		return nil, errors.New("email/password combination don't work 1")
 	}
 

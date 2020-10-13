@@ -14,6 +14,7 @@ type Config struct {
 	DBMaxOpenConnections int
 	DBMaxIdleConnections int
 	LogLevel             log.Level `split_words:"true"`
+	CORSOrigins          []string  `split_words:"true"`
 }
 
 type Env struct {
@@ -44,6 +45,7 @@ var devConfig = Config{
 	DBMaxOpenConnections: 50,
 	DBMaxIdleConnections: 10,
 	LogLevel:             log.DebugLevel,
+	CORSOrigins:          []string{"http://localhost:3000", "https://localhost:3000"},
 }
 
 var prodConfig = Config{
@@ -55,4 +57,5 @@ var prodConfig = Config{
 	DBMaxOpenConnections: 500,
 	DBMaxIdleConnections: 10,
 	LogLevel:             log.InfoLevel,
+	CORSOrigins:          []string{"http://alpha.edyn.me", "https://alpha.edyn.me", "http://api.edyn.me/", "https://api.edyn.me/"},
 }

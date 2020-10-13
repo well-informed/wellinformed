@@ -286,6 +286,7 @@ type InteractionEdge {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
+  """provides a list of all sources that exist in the system"""
   sources(input: SrcRSSFeedConnectionInput): SrcRSSFeedConnection!
   userFeed: UserFeed!
   me: User!
