@@ -55,8 +55,8 @@ models:
     model: github.com/well-informed/wellinformed/graph/model.SrcRSSFeed
   User:
     model: github.com/well-informed/wellinformed/graph/model.User
-  PreferenceSet:
-    model: github.com/well-informed/wellinformed/graph/model.PreferenceSet
+  Engine:
+    model: github.com/well-informed/wellinformed/graph/model.Engine
   ContentItem:
     model: github.com/well-informed/wellinformed/graph/model.ContentItem
   History:

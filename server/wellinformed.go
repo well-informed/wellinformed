@@ -12,7 +12,7 @@ import (
 	"github.com/well-informed/wellinformed"
 	"github.com/well-informed/wellinformed/auth"
 	"github.com/well-informed/wellinformed/database"
-	feed "github.com/well-informed/wellinformed/feedService"
+	"github.com/well-informed/wellinformed/feed"
 	"github.com/well-informed/wellinformed/graph"
 	"github.com/well-informed/wellinformed/graph/generated"
 	"github.com/well-informed/wellinformed/rss"
@@ -23,12 +23,18 @@ import (
 const defaultPort = "8080"
 
 func main() {
-
 	conf := wellinformed.GetConfig()
 
+	//Injecting database dependency so test version can be substituted as needed
+	router, _ := initWellinformedApp(conf, database.NewDB(conf))
+
+	log.Printf("connect to http://localhost:%s/ for GraphQL playground", conf.ServerPort)
+	log.Fatal(http.ListenAndServe(":"+conf.ServerPort, router))
+}
+
+func initWellinformedApp(conf wellinformed.Config, db database.DB) (*chi.Mux, *graph.Resolver) {
 	log.SetLevel(conf.LogLevel)
 
-	db := database.NewDB(conf)
 	rss := rss.NewRSS()
 	sub, err := subscriber.NewSubscriber(rss, db)
 	if err != nil {
@@ -40,7 +46,7 @@ func main() {
 		DB:          db,
 		RSS:         rss,
 		Sub:         sub,
-		Feed:        feedService,
+		FeedService: feedService,
 		UserService: user.NewUserService(db),
 	}
 
@@ -49,8 +55,8 @@ func main() {
 	// Basic CORS
 	// for more ideas, see: https://developer.github.com/v3/#cross-origin-resource-sharing
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://alpha.edyn.me", "https://alpha.edyn.me", "http://api.edyn.me/", "https://api.edyn.me/"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedOrigins:   conf.CORSOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "FETCH"},
 		AllowedHeaders:   []string{"*"},
 		ExposedHeaders:   []string{"*"},
 		AllowCredentials: true,
@@ -67,7 +73,5 @@ func main() {
 	router.Handle("/query", srv)
 
 	router.Post("/refresh_token", auth.RefreshToken(resolver.DB))
-
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", conf.ServerPort)
-	log.Fatal(http.ListenAndServe(":"+conf.ServerPort, router))
+	return router, resolver
 }

@@ -42,7 +42,6 @@ func (db DB) InsertSrcRSSFeed(feed model.SrcRSSFeed) (*model.SrcRSSFeed, error) 
 		return nil, err
 	}
 	feed.ID = id
-	log.Info("got id back: ", id)
 	return &feed, nil
 }
 
@@ -86,7 +85,7 @@ func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error
 	FROM src_rss_feeds
 	INNER JOIN user_subscriptions
 	ON src_rss_feeds.id = user_subscriptions.source_id
-	WHERE user_subscriptions.user_id = $1 
+	WHERE user_subscriptions.user_id = $1
 	ORDER BY src_rss_feeds.id`
 	return db.listSrcRSSFeedsByQuery(stmt, user.ID)
 }

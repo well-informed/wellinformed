@@ -1,16 +1,11 @@
 scalar Time
 
-type AuthToken {
-  accessToken: String!
-  expiredAt: Time!
+interface Feed {
+  title: String!
+  contentItems(input: ContentItemConnectionInput!): ContentItemConnection!
 }
 
-type AuthResponse {
-  authToken: AuthToken!
-  user: User!
-}
-
-type SrcRSSFeed {
+type SrcRSSFeed implements Feed {
   id: ID!
   title: String!
   description: String
@@ -20,8 +15,52 @@ type SrcRSSFeed {
   lastFetchedAt: Time!
   language: String
   generator: String
-  contentItems(input: ContentItemConnectionInput): ContentItemConnection!
+  contentItems(input: ContentItemConnectionInput!): ContentItemConnection!
   isSubscribed: Boolean!
+}
+
+type UserFeed implements Feed {
+  id: ID!
+  userID: ID!
+  user: User!
+  title: String!
+  name: String!
+  contentItems(input: ContentItemConnectionInput!): ContentItemConnection!
+  subscriptions: [FeedSubscription!]
+  engine: Engine!
+  isActive: Boolean!
+}
+
+enum SourceType {
+  Unknown
+  SrcRSSFeed
+  UserFeed
+}
+
+type Engine {
+  id: ID!
+  user: User!
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+input EngineInput {
+  name: String!
+  sort: sortType!
+  startDate: Time
+  endDate: Time
+}
+
+type AuthToken {
+  accessToken: String!
+  expiredAt: Time!
+}
+
+type AuthResponse {
+  authToken: AuthToken!
+  user: User!
 }
 
 input ContentItemInteractionsInput {
@@ -54,10 +93,16 @@ type UserSubscription {
   createdAt: Time!
 }
 
-type UserFeed {
-  userID: ID!
-  name: String!
-  contentItems: [ContentItem!]!
+type FeedSubscription {
+  id: ID!
+  userFeed: UserFeed!
+  source: Feed!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+input UserInteractionsInput {
+  readState: ReadState
 }
 
 type User {
@@ -68,35 +113,13 @@ type User {
   email: String!
   password: String!
   feed: UserFeed!
+  feeds: [UserFeed!]!
   srcRSSFeeds(input: SrcRSSFeedConnectionInput): SrcRSSFeedConnection!
-  preferenceSets: [PreferenceSet!]!
-  activePreferenceSet: PreferenceSet!
+  engines: [Engine!]!
   createdAt: Time!
   updatedAt: Time!
   subscriptions(input: UserSubscriptionConnectionInput): UserSubscriptionConnection!
   interactions(readState: ReadState, input: InteractionConnectionInput!): InteractionConnection!
-}
-
-type PreferenceSet {
-  id: ID!
-  user: User!
-  name: String!
-  active: Boolean!
-  sort: sortType!
-  startDate: Time
-  endDate: Time
-}
-
-input PreferenceSetInput {
-  name: String!
-  """
-  true sets the entered preference set as active, false never has any effect.
-  A prefSet can only become inactive if another prefSet is set to active
-  """
-  activate: Boolean!
-  sort: sortType!
-  startDate: Time
-  endDate: Time
 }
 
 enum sortType {
@@ -158,6 +181,27 @@ input GetUserInput {
   userID: ID
   email: String
   username: String
+}
+
+input AddSourceInput {
+  """
+  the ID of the feed you want to subscribe to
+  """
+  sourceFeedID: ID!
+  """
+  The source's __typename value
+  """
+  sourceType: SourceType!
+  """
+  the ID of the feed that is subscribing to the source. defaults to the active feed
+  """
+  targetFeedID: ID
+}
+
+input AddUserFeedInput {
+  name: String!
+  engineID: ID
+  clonedFeedID: ID
 }
 
 # Pageable Interface for ContentItem
@@ -242,13 +286,14 @@ type InteractionEdge {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
+  """provides a list of all sources that exist in the system"""
   sources(input: SrcRSSFeedConnectionInput): SrcRSSFeedConnection!
   userFeed: UserFeed!
   me: User!
   user(input: GetUserInput): User!
   getContentItem(input: ID!): ContentItem!
   getInteractionByContentID(input: ID!): Interaction
-  preferenceSets: [PreferenceSet!]!
+  engines: [Engine!]!
 }
 
 type DeleteResponse {
@@ -256,10 +301,12 @@ type DeleteResponse {
 }
 
 type Mutation {
-  addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
+  addUserFeed(input: AddUserFeedInput!): UserFeed!
+  addSrcRSSFeed(feedLink: String!, targetFeedID: ID!): SrcRSSFeed!
+  addSource(input: AddSourceInput!): FeedSubscription!
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
   login(input: LoginInput!): AuthResponse!
   saveInteraction(input: InteractionInput): ContentItem!
-  savePreferenceSet(input: PreferenceSetInput!): PreferenceSet!
+  saveEngine(engine: EngineInput!): Engine!
 }

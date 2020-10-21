@@ -1,2 +1,4 @@
 .vscode/
 wellinformed
+database/migrations/bindata.go
+migrations/bindata.go

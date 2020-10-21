@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
@@ -14,6 +15,10 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 	page "github.com/well-informed/wellinformed/pagination"
 )
+
+func (r *contentItemResolver) SourceType(ctx context.Context, obj *model.ContentItem) (string, error) {
+	panic(fmt.Errorf("not implemented"))
+}
 
 func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.ContentItem, input *model.ContentItemInteractionsInput) (*model.Interaction, error) {
 	var userIdToUse int64
@@ -36,6 +41,25 @@ func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.Conten
 	return r.DB.GetInteractionByContentID(userIdToUse, obj.ID)
 }
 
+func (r *engineResolver) User(ctx context.Context, obj *model.Engine) (*model.User, error) {
+	return r.DB.GetUserByID(obj.UserID)
+}
+
+func (r *feedSubscriptionResolver) UserFeed(ctx context.Context, obj *model.FeedSubscription) (*model.UserFeed, error) {
+	return r.DB.GetUserFeedByID(obj.UserFeedID)
+}
+
+func (r *feedSubscriptionResolver) Source(ctx context.Context, obj *model.FeedSubscription) (model.Feed, error) {
+	if obj.SourceType == model.SourceTypeSrcRSSFeed {
+		//TODO: Fix GetSrcRSSFeed to require one value instead of an input struct
+		input := model.SrcRSSFeedInput{ID: &obj.SourceID}
+		return r.DB.GetSrcRSSFeed(input)
+	} else if obj.SourceType == model.SourceTypeUserFeed {
+		return r.DB.GetUserFeedByID(obj.SourceID)
+	}
+	return nil, errors.New("sourceType not recognized")
+}
+
 func (r *interactionResolver) User(ctx context.Context, obj *model.Interaction) (*model.User, error) {
 	return r.DB.GetUserByInteraction(obj.ID)
 }
@@ -44,12 +68,45 @@ func (r *interactionResolver) ContentItem(ctx context.Context, obj *model.Intera
 	return r.DB.GetContentItemByInteraction(obj.ID)
 }
 
-func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
+func (r *mutationResolver) AddUserFeed(ctx context.Context, input model.AddUserFeedInput) (*model.UserFeed, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	newEngine := &model.Engine{
+		UserID: user.ID,
+		Name:   input.Name,
+		Sort:   model.SortTypeChronological,
+	}
+
+	savedEngine, err := r.DB.SaveEngine(newEngine)
+	if err != nil {
+		log.Error("couldn't create new engine for new user feed. err: ", err)
+		return nil, err
+	}
+	//Adding without cloning engine or source list for a start...
+	userFeed := &model.UserFeed{
+		UserID:   user.ID,
+		EngineID: savedEngine.ID,
+		Title:    input.Name,
+		Name:     input.Name,
+	}
+	createdUserFeed, err := r.DB.CreateUserFeed(userFeed)
+	if err != nil {
+		log.Error("could not create new userFeed. err: ", err)
+		return nil, err
+	}
+	return createdUserFeed, nil
+}
+
+func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string, targetFeedID int64) (*model.SrcRSSFeed, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var srcRSSFeed *model.SrcRSSFeed
 	link, err := url.Parse(feedLink)
 	if err != nil {
 		log.Error("couldn't parse feedLink: ", feedLink)
@@ -67,29 +124,64 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	log.Debug("existingFeed: ", existingFeed)
 	log.Debugf("user: %v", user)
 
+	//TODO: Revise the sub interface to handle only the global subscription to the SrcRSSFeed
+	//and not the database structures
 	if existingFeed != nil {
-		_, err := r.Sub.AddUserSubscription(user, existingFeed)
+		srcRSSFeed = existingFeed
+		// _, err := r.Sub.AddUserSubscription(user, existingFeed)
+		// if err != nil {
+		// 	return existingFeed, err
+		// }
+		// return existingFeed, nil
+	} else {
+		srcRSSFeed, err = r.Sub.SubscribeToRSSFeed(ctx, feedLink)
 		if err != nil {
-			return existingFeed, err
+			return nil, err
 		}
-		return existingFeed, nil
 	}
-	insertedFeed, err := r.Sub.SubscribeToRSSFeed(ctx, feedLink)
+
+	// _, err = r.Sub.AddUserSubscription(user, insertedFeed)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	//Add Feed Subscription properly so that serveContent will work with actual Source feeds
+	_, err = r.DB.CreateFeedSubscription(targetFeedID, srcRSSFeed.ID, model.SourceTypeSrcRSSFeed)
+	if err != nil {
+		log.Errorf("unable to create feed subscription between target feed: %v and sourceRSSFeed: %+v", targetFeedID, srcRSSFeed)
+	}
+	return srcRSSFeed, nil
+}
+
+func (r *mutationResolver) AddSource(ctx context.Context, input model.AddSourceInput) (*model.FeedSubscription, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-	_, err = r.Sub.AddUserSubscription(user, insertedFeed)
+	//TODO: Go back and handle concept of UserSubscription
+	//If target feed is not supplied explicitly get the user's active feed
+	var feedSubscription *model.FeedSubscription
+	if input.TargetFeedID == nil {
+		targetFeed, err := r.DB.GetUserFeedByID(user.ActiveUserFeedID)
+		if err != nil {
+			return nil, err
+		}
+		input.TargetFeedID = &targetFeed.ID
+	}
+
+	//Record Feed subscription
+	feedSubscription, err = r.DB.CreateFeedSubscription(*input.TargetFeedID, input.SourceFeedID, input.SourceType)
 	if err != nil {
 		return nil, err
 	}
 
-	return insertedFeed, nil
+	return feedSubscription, nil
 }
 
 func (r *mutationResolver) DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
-		return nil, errors.New("Something went wrong")
+		return nil, err
 	}
 	numDeleted, err := r.DB.DeleteUserSubscription(user.ID, srcRssfeedID)
 	if err != nil {
@@ -127,23 +219,8 @@ func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.Int
 	return r.DB.SaveInteraction(user.ID, input)
 }
 
-func (r *mutationResolver) SavePreferenceSet(ctx context.Context, input model.PreferenceSetInput) (*model.PreferenceSet, error) {
-	return r.UserService.SavePreferenceSet(ctx, &input)
-}
-
-func (r *preferenceSetResolver) User(ctx context.Context, obj *model.PreferenceSet) (*model.User, error) {
-	return r.DB.GetUserByID(obj.UserID)
-}
-
-func (r *preferenceSetResolver) Active(ctx context.Context, obj *model.PreferenceSet) (bool, error) {
-	user, err := auth.GetCurrentUserFromCTX(ctx)
-	if err != nil {
-		return false, err
-	}
-	if user.ActivePreferenceSetName == obj.Name {
-		return true, nil
-	}
-	return false, nil
+func (r *mutationResolver) SaveEngine(ctx context.Context, engine model.EngineInput) (*model.Engine, error) {
+	return r.UserService.SaveEngine(ctx, &engine)
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -177,17 +254,22 @@ func (r *queryResolver) UserFeed(ctx context.Context) (*model.UserFeed, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting user feed: %v", err)
-		return nil, errors.New("You are not signed in!")
+		return nil, errors.New("you are not signed in")
 	}
-	log.Printf("currentUser: %v", currentUser)
-	return r.Feed.Serve(ctx, currentUser)
+	log.Debugf("fetching currentUser %v userFeed", currentUser)
+	activeFeed, err := r.DB.GetUserFeedByID(currentUser.ActiveUserFeedID)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("retrieved UserFeed as active: %+v", activeFeed)
+	return activeFeed, nil
 }
 
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	currentUser, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting user feed: %v", err)
-		return nil, errors.New("You are not signed in!")
+		return nil, errors.New("you are not signed in")
 	}
 	return currentUser, nil
 }
@@ -203,7 +285,7 @@ func (r *queryResolver) User(ctx context.Context, input *model.GetUserInput) (*m
 	} else if input.Username != nil {
 		user, err = r.DB.GetUserByUsername(*input.Username)
 	} else {
-		return nil, errors.New("You need to provide an input")
+		return nil, errors.New("you need to provide an input")
 	}
 
 	if err != nil {
@@ -236,15 +318,15 @@ func (r *queryResolver) GetInteractionByContentID(ctx context.Context, input int
 	return r.DB.GetInteractionByContentID(currentUser.ID, input)
 }
 
-func (r *queryResolver) PreferenceSets(ctx context.Context) ([]*model.PreferenceSet, error) {
+func (r *queryResolver) Engines(ctx context.Context) ([]*model.Engine, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return r.DB.ListPreferenceSetsByUser(user.ID)
+	return r.DB.ListEnginesByUser(user.ID)
 }
 
-func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input *model.ContentItemConnectionInput) (*model.ContentItemConnection, error) {
+func (r *srcRSSFeedResolver) ContentItems(ctx context.Context, obj *model.SrcRSSFeed, input model.ContentItemConnectionInput) (*model.ContentItemConnection, error) {
 	items, err := r.DB.ListContentItemsBySource(obj)
 	if err != nil {
 		return nil, err
@@ -271,6 +353,11 @@ func (r *userResolver) Feed(ctx context.Context, obj *model.User) (*model.UserFe
 	return r.Query().UserFeed(ctx)
 }
 
+func (r *userResolver) Feeds(ctx context.Context, obj *model.User) ([]*model.UserFeed, error) {
+	//TODO: paginate
+	return r.DB.ListUserFeedsByUser(obj.ID)
+}
+
 func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *model.SrcRSSFeedConnectionInput) (*model.SrcRSSFeedConnection, error) {
 	feeds, err := r.DB.ListSrcRSSFeedsByUser(obj)
 	if err != nil {
@@ -279,12 +366,8 @@ func (r *userResolver) SrcRSSFeeds(ctx context.Context, obj *model.User, input *
 	return page.BuildSrcRSSFeedPage(input.First, input.After, feeds)
 }
 
-func (r *userResolver) PreferenceSets(ctx context.Context, obj *model.User) ([]*model.PreferenceSet, error) {
-	return r.DB.ListPreferenceSetsByUser(obj.ID)
-}
-
-func (r *userResolver) ActivePreferenceSet(ctx context.Context, obj *model.User) (*model.PreferenceSet, error) {
-	return r.DB.GetPreferenceSetByName(obj.ID, obj.ActivePreferenceSetName)
+func (r *userResolver) Engines(ctx context.Context, obj *model.User) ([]*model.Engine, error) {
+	return r.DB.ListEnginesByUser(obj.ID)
 }
 
 func (r *userResolver) Subscriptions(ctx context.Context, obj *model.User, input *model.UserSubscriptionConnectionInput) (*model.UserSubscriptionConnection, error) {
@@ -303,13 +386,45 @@ func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readSt
 	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		log.Errorf("error while getting Interactions for a user: %v", err)
-		return nil, errors.New("unauthorized request")
+		return nil, errors.New("you are not signed in")
 	}
 	interactions, err := r.DB.ListUserInteractions(obj.ID, readState)
 	if err != nil {
 		return nil, err
 	}
 	return page.BuildInteractionPage(input.First, input.After, interactions)
+}
+
+func (r *userFeedResolver) User(ctx context.Context, obj *model.UserFeed) (*model.User, error) {
+	return r.DB.GetUserByID(obj.UserID)
+}
+
+func (r *userFeedResolver) ContentItems(ctx context.Context, obj *model.UserFeed, input model.ContentItemConnectionInput) (*model.ContentItemConnection, error) {
+	contentItems, err := r.FeedService.ServeContent(ctx, obj)
+	if err != nil {
+		return nil, err
+	}
+	//Set default value due to nil panic when 0 is passed to pager
+	return page.BuildContentItemPage(input.First, input.After, contentItems)
+}
+
+func (r *userFeedResolver) Subscriptions(ctx context.Context, obj *model.UserFeed) ([]*model.FeedSubscription, error) {
+	return r.DB.ListFeedSubscriptionsByFeedID(obj.ID)
+}
+
+func (r *userFeedResolver) Engine(ctx context.Context, obj *model.UserFeed) (*model.Engine, error) {
+	return r.DB.GetEngineByID(obj.EngineID)
+}
+
+func (r *userFeedResolver) IsActive(ctx context.Context, obj *model.UserFeed) (bool, error) {
+	user, err := r.DB.GetUserByID(obj.UserID)
+	if err != nil {
+		return false, err
+	}
+	if user.ActiveUserFeedID == obj.ID {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
@@ -335,14 +450,19 @@ func (r *userSubscriptionResolver) SrcRSSFeed(ctx context.Context, obj *model.Us
 // ContentItem returns generated.ContentItemResolver implementation.
 func (r *Resolver) ContentItem() generated.ContentItemResolver { return &contentItemResolver{r} }
 
+// Engine returns generated.EngineResolver implementation.
+func (r *Resolver) Engine() generated.EngineResolver { return &engineResolver{r} }
+
+// FeedSubscription returns generated.FeedSubscriptionResolver implementation.
+func (r *Resolver) FeedSubscription() generated.FeedSubscriptionResolver {
+	return &feedSubscriptionResolver{r}
+}
+
 // Interaction returns generated.InteractionResolver implementation.
 func (r *Resolver) Interaction() generated.InteractionResolver { return &interactionResolver{r} }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
-
-// PreferenceSet returns generated.PreferenceSetResolver implementation.
-func (r *Resolver) PreferenceSet() generated.PreferenceSetResolver { return &preferenceSetResolver{r} }
 
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
@@ -353,16 +473,21 @@ func (r *Resolver) SrcRSSFeed() generated.SrcRSSFeedResolver { return &srcRSSFee
 // User returns generated.UserResolver implementation.
 func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 
+// UserFeed returns generated.UserFeedResolver implementation.
+func (r *Resolver) UserFeed() generated.UserFeedResolver { return &userFeedResolver{r} }
+
 // UserSubscription returns generated.UserSubscriptionResolver implementation.
 func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 	return &userSubscriptionResolver{r}
 }
 
 type contentItemResolver struct{ *Resolver }
+type engineResolver struct{ *Resolver }
+type feedSubscriptionResolver struct{ *Resolver }
 type interactionResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
-type preferenceSetResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
+type userFeedResolver struct{ *Resolver }
 type userSubscriptionResolver struct{ *Resolver }

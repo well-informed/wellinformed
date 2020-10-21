@@ -114,7 +114,7 @@ func GetCurrentUserFromCTX(ctx context.Context) (*model.User, error) {
 		return nil, errNoUserInContext
 	}
 
-	fmt.Println(ctx.Value(CurrentUserKey))
+	log.Trace("authenticating user: ", ctx.Value(CurrentUserKey))
 	user, ok := ctx.Value(CurrentUserKey).(*model.User)
 	if !ok || user == nil {
 		log.Error("could not parse current user object.", errNoUserInContext)
@@ -204,10 +204,8 @@ func ValidateToken(value string, env string) (jwt.MapClaims, error) {
 	})
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		fmt.Println(claims)
 		return claims, nil
 	} else {
-		fmt.Println(err)
 		return nil, err
 	}
 }

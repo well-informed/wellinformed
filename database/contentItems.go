@@ -133,8 +133,15 @@ func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model
 
 func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortType, start_dt *time.Time, end_dt *time.Time) ([]*model.ContentItem, error) {
 	contentItems := make([]*model.ContentItem, 0)
+	//Check for empty source list
+	if len(srcList) == 0 {
+		return contentItems, nil
+	}
+	log.Debug("length of source list: ", len(srcList))
+
 	var srcIDs []int64
 	for _, src := range srcList {
+		log.Debug("got source: ", src)
 		srcIDs = append(srcIDs, src.ID)
 	}
 	var order string

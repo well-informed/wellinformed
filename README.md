@@ -18,3 +18,4 @@ In order to add new files to the database/migrations directory which are automat
 ```
 migrate create -ext sql -dir database/migrations -seq $MIGRATION_NAME
 ```
+

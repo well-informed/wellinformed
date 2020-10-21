@@ -63,6 +63,18 @@ import (
 {{- range .Types }}
 func Build{{.}}Page(first int, after *string, list []*model.{{.}}) (*model.{{.}}Connection, error) {
 	edges := __{{.}}__listToEdges(list)
+	if len(edges) == 0 {
+		info := &model.{{.}}PageInfo{
+			HasPreviousPage: false,
+			HasNextPage: false,
+			StartCursor: "",
+			EndCursor: "",
+		}
+		return &model.{{.}}Connection{
+			Edges: edges,
+			PageInfo: info,
+		}, nil
+	}
 	info := &model.{{.}}PageInfo{
 		HasPreviousPage: len(edges) > 0 && after != nil,
 		HasNextPage:     len(edges) > first,

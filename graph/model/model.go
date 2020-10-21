@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type SrcRSSFeed struct {
 	ID            int64     `json:"id"`
@@ -14,17 +16,31 @@ type SrcRSSFeed struct {
 	Generator     *string   `json:"generator"`
 }
 
+func (SrcRSSFeed) IsFeed() {}
+
 type User struct {
-	ID                      int64     `json:"id"`
-	Firstname               string    `json:"firstname"`
-	Lastname                string    `json:"lastname"`
-	Username                string    `json:"username"`
-	Email                   string    `json:"email"`
-	Password                string    `json:"password"`
-	ActivePreferenceSetName string    `json:"activePreferenceSet"`
-	CreatedAt               time.Time `json:"createdAt"`
-	UpdatedAt               time.Time `json:"updatedAt"`
+	ID               int64     `json:"id"`
+	Firstname        string    `json:"firstname" db:"first_name"`
+	Lastname         string    `json:"lastname" db:"last_name"`
+	Username         string    `json:"username" db:"user_name"`
+	Email            string    `json:"email" db:"email"`
+	Password         string    `json:"password" db:"password"`
+	ActiveUserFeedID int64     `json:"activeUserFeed" db:"active_user_feed"`
+	CreatedAt        time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt        time.Time `json:"updatedAt" db:"updated_at"`
 }
+
+type UserFeed struct {
+	ID        int64  `json:"id"`
+	UserID    int64  `json:"userID" db:"user_id"`
+	EngineID  int64  `json:"engine" db:"engine_id"`
+	Title     string `json:"title"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"CreatedAt" db:"created_at"`
+	UpdatedAt string `json:"UpdatedAt" db:"updated_at"`
+}
+
+func (UserFeed) IsFeed() {}
 
 type UserSubscription struct {
 	ID           int64     `json:"id"`
@@ -33,7 +49,16 @@ type UserSubscription struct {
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 }
 
-type PreferenceSet struct {
+type FeedSubscription struct {
+	ID         int64      `json:"id"`
+	UserFeedID int64      `json:"userFeed" db:"feed_id"`
+	SourceID   int64      `json:"source" db:"source_id"`
+	SourceType SourceType `json:"sourceType" db:"source_type"`
+	CreatedAt  time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt  time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+type Engine struct {
 	ID        int64      `json:"id"`
 	UserID    int64      `json:"user" db:"user_id"`
 	Name      string     `json:"name"`
@@ -57,7 +82,7 @@ type ContentItem struct {
 	GUID        *string    `json:"guid"`
 	ImageTitle  *string    `json:"imageTitle" db:"image_title"`
 	ImageURL    *string    `json:"imageURL" db:"image_url"`
-	SourceType  string     `json:"sourceType" db:"source_type"`
+	SourceType  SourceType `json:"sourceType" db:"source_type"`
 }
 
 type Interaction struct {

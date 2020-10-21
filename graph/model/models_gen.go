@@ -9,6 +9,25 @@ import (
 	"time"
 )
 
+type Feed interface {
+	IsFeed()
+}
+
+type AddSourceInput struct {
+	// the ID of the feed you want to subscribe to
+	SourceFeedID int64 `json:"sourceFeedID"`
+	// The source's __typename value
+	SourceType SourceType `json:"sourceType"`
+	// the ID of the feed that is subscribing to the source. defaults to the active feed
+	TargetFeedID *int64 `json:"targetFeedID"`
+}
+
+type AddUserFeedInput struct {
+	Name         string `json:"name"`
+	EngineID     *int64 `json:"engineID"`
+	ClonedFeedID *int64 `json:"clonedFeedID"`
+}
+
 type AuthResponse struct {
 	AuthToken *AuthToken `json:"authToken"`
 	User      *User      `json:"user"`
@@ -47,6 +66,13 @@ type ContentItemPageInfo struct {
 
 type DeleteResponse struct {
 	Ok bool `json:"ok"`
+}
+
+type EngineInput struct {
+	Name      string     `json:"name"`
+	Sort      SortType   `json:"sort"`
+	StartDate *time.Time `json:"startDate"`
+	EndDate   *time.Time `json:"endDate"`
 }
 
 type GetUserInput struct {
@@ -90,16 +116,6 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
-type PreferenceSetInput struct {
-	Name string `json:"name"`
-	// true sets the entered preference set as active, false never has any effect.
-	// A prefSet can only become inactive if another prefSet is set to active
-	Activate  bool       `json:"activate"`
-	Sort      SortType   `json:"sort"`
-	StartDate *time.Time `json:"startDate"`
-	EndDate   *time.Time `json:"endDate"`
-}
-
 type RegisterInput struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`
@@ -137,10 +153,8 @@ type SrcRSSFeedPageInfo struct {
 	EndCursor       string `json:"endCursor"`
 }
 
-type UserFeed struct {
-	UserID       int64          `json:"userID"`
-	Name         string         `json:"name"`
-	ContentItems []*ContentItem `json:"contentItems"`
+type UserInteractionsInput struct {
+	ReadState *ReadState `json:"readState"`
 }
 
 type UserSubscriptionConnection struct {
@@ -207,6 +221,49 @@ func (e *ReadState) UnmarshalGQL(v interface{}) error {
 }
 
 func (e ReadState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type SourceType string
+
+const (
+	SourceTypeUnknown    SourceType = "Unknown"
+	SourceTypeSrcRSSFeed SourceType = "SrcRSSFeed"
+	SourceTypeUserFeed   SourceType = "UserFeed"
+)
+
+var AllSourceType = []SourceType{
+	SourceTypeUnknown,
+	SourceTypeSrcRSSFeed,
+	SourceTypeUserFeed,
+}
+
+func (e SourceType) IsValid() bool {
+	switch e {
+	case SourceTypeUnknown, SourceTypeSrcRSSFeed, SourceTypeUserFeed:
+		return true
+	}
+	return false
+}
+
+func (e SourceType) String() string {
+	return string(e)
+}
+
+func (e *SourceType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = SourceType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid SourceType", str)
+	}
+	return nil
+}
+
+func (e SourceType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
