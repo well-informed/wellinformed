@@ -100,12 +100,13 @@ func (r *mutationResolver) AddUserFeed(ctx context.Context, input model.AddUserF
 	return createdUserFeed, nil
 }
 
-func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error) {
+func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string, targetFeedID int64) (*model.SrcRSSFeed, error) {
 	user, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	var srcRSSFeed *model.SrcRSSFeed
 	link, err := url.Parse(feedLink)
 	if err != nil {
 		log.Error("couldn't parse feedLink: ", feedLink)
@@ -123,23 +124,33 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string) (
 	log.Debug("existingFeed: ", existingFeed)
 	log.Debugf("user: %v", user)
 
+	//TODO: Revise the sub interface to handle only the global subscription to the SrcRSSFeed
+	//and not the database structures
 	if existingFeed != nil {
-		_, err := r.Sub.AddUserSubscription(user, existingFeed)
+		srcRSSFeed = existingFeed
+		// _, err := r.Sub.AddUserSubscription(user, existingFeed)
+		// if err != nil {
+		// 	return existingFeed, err
+		// }
+		// return existingFeed, nil
+	} else {
+		srcRSSFeed, err = r.Sub.SubscribeToRSSFeed(ctx, feedLink)
 		if err != nil {
-			return existingFeed, err
+			return nil, err
 		}
-		return existingFeed, nil
-	}
-	insertedFeed, err := r.Sub.SubscribeToRSSFeed(ctx, feedLink)
-	if err != nil {
-		return nil, err
-	}
-	_, err = r.Sub.AddUserSubscription(user, insertedFeed)
-	if err != nil {
-		return nil, err
 	}
 
-	return insertedFeed, nil
+	// _, err = r.Sub.AddUserSubscription(user, insertedFeed)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	//Add Feed Subscription properly so that serveContent will work with actual Source feeds
+	_, err = r.DB.CreateFeedSubscription(targetFeedID, srcRSSFeed.ID, model.SourceTypeSrcRSSFeed)
+	if err != nil {
+		log.Errorf("unable to create feed subscription between target feed: %v and sourceRSSFeed: %+v", targetFeedID, srcRSSFeed)
+	}
+	return srcRSSFeed, nil
 }
 
 func (r *mutationResolver) AddSource(ctx context.Context, input model.AddSourceInput) (*model.FeedSubscription, error) {

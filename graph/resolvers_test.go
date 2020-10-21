@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
@@ -121,21 +122,28 @@ func TestAddSource(t *testing.T) {
 		t.Error("couldn't register userA")
 	}
 	_, Actx := NewMockAuthenticatedContext(resolver.DB, authUserA.User.ID)
+
 	authUserB, err := resolver.Mutation().Register(context.Background(), userBRegisterInput)
 	if err != nil {
 		t.Error("couldn't register userB")
 	}
 	userB, Bctx := NewMockAuthenticatedContext(resolver.DB, authUserB.User.ID)
 
-	cryptoFeed, err := resolver.Mutation().AddSrcRSSFeed(Actx, "https://bankless.substack.com/feed")
+	//Add srcRSSFeed to User A's UserFeed
+	cryptoFeed, err := resolver.Mutation().AddSrcRSSFeed(Actx, "https://bankless.substack.com/feed", authUserA.User.ActiveUserFeedID)
 	if err != nil {
 		t.Error("couldn't add src to user A's feed. err: ", err)
 	}
+	AUserFeed, err := resolver.Query().UserFeed(Actx)
+	if err != nil {
+		t.Error("couldn't get user A's User feed. err: ", err)
+	}
 
+	//Subscribe User B's UserFeed to User A's UserFeed
 	input := model.AddSourceInput{
-		SourceFeedID: cryptoFeed.ID,
+		SourceFeedID: AUserFeed.ID,
 		SourceType:   model.SourceTypeUserFeed,
-		TargetFeedID: &userB.ActiveUserFeedID, //Problem is this attribute doesn't exist in the graphql schema
+		TargetFeedID: &userB.ActiveUserFeedID,
 	}
 	BFeedSubsription, err := resolver.Mutation().AddSource(Bctx, input)
 	if err != nil {
@@ -144,9 +152,11 @@ func TestAddSource(t *testing.T) {
 	if BFeedSubsription.ID == 0 {
 		t.Error("B feed subscription had invalid value 0")
 	}
-	if BFeedSubsription.SourceID != cryptoFeed.ID {
+	if BFeedSubsription.SourceID != AUserFeed.ID {
 		t.Errorf("subscription source ID %v does not equal intended source ID %v", BFeedSubsription.SourceID, cryptoFeed.ID)
 	}
+	log.Infof("User B's Feed subscription: %+v", BFeedSubsription)
+	//Problem is B's feed is not returning content
 	//Get content from feed, make sure it includes original srcRSSFeed
 	userFeed, err := resolver.Query().UserFeed(Bctx)
 	if err != nil {
@@ -161,6 +171,7 @@ func TestAddSource(t *testing.T) {
 	}
 	if len(contentItemConn.Edges) == 0 {
 		t.Errorf("contentItemConnections is empty")
+		t.Errorf("userFeed: %+v", userFeed)
 	} else {
 		//Check that served content item came from original srcRSSFeed
 		contentSourceID := contentItemConn.Edges[0].Node.SourceID

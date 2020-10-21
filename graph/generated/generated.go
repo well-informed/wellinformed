@@ -151,7 +151,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddSource          func(childComplexity int, input model.AddSourceInput) int
-		AddSrcRSSFeed      func(childComplexity int, feedLink string) int
+		AddSrcRSSFeed      func(childComplexity int, feedLink string, targetFeedID int64) int
 		AddUserFeed        func(childComplexity int, input model.AddUserFeedInput) int
 		DeleteSubscription func(childComplexity int, srcRssfeedID int64) int
 		Login              func(childComplexity int, input model.LoginInput) int
@@ -273,7 +273,7 @@ type InteractionResolver interface {
 }
 type MutationResolver interface {
 	AddUserFeed(ctx context.Context, input model.AddUserFeedInput) (*model.UserFeed, error)
-	AddSrcRSSFeed(ctx context.Context, feedLink string) (*model.SrcRSSFeed, error)
+	AddSrcRSSFeed(ctx context.Context, feedLink string, targetFeedID int64) (*model.SrcRSSFeed, error)
 	AddSource(ctx context.Context, input model.AddSourceInput) (*model.FeedSubscription, error)
 	DeleteSubscription(ctx context.Context, srcRssfeedID int64) (*model.DeleteResponse, error)
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthResponse, error)
@@ -758,7 +758,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddSrcRSSFeed(childComplexity, args["feedLink"].(string)), true
+		return e.complexity.Mutation.AddSrcRSSFeed(childComplexity, args["feedLink"].(string), args["targetFeedID"].(int64)), true
 
 	case "Mutation.addUserFeed":
 		if e.complexity.Mutation.AddUserFeed == nil {
@@ -1668,6 +1668,7 @@ type InteractionEdge {
 
 type Query {
   srcRSSFeed(input: SrcRSSFeedInput): SrcRSSFeed!
+  """provides a list of all sources that exist in the system"""
   sources(input: SrcRSSFeedConnectionInput): SrcRSSFeedConnection!
   userFeed: UserFeed!
   me: User!
@@ -1683,7 +1684,7 @@ type DeleteResponse {
 
 type Mutation {
   addUserFeed(input: AddUserFeedInput!): UserFeed!
-  addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
+  addSrcRSSFeed(feedLink: String!, targetFeedID: ID!): SrcRSSFeed!
   addSource(input: AddSourceInput!): FeedSubscription!
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!
@@ -1738,6 +1739,14 @@ func (ec *executionContext) field_Mutation_addSrcRSSFeed_args(ctx context.Contex
 		}
 	}
 	args["feedLink"] = arg0
+	var arg1 int64
+	if tmp, ok := rawArgs["targetFeedID"]; ok {
+		arg1, err = ec.unmarshalNID2int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["targetFeedID"] = arg1
 	return args, nil
 }
 
@@ -4006,7 +4015,7 @@ func (ec *executionContext) _Mutation_addSrcRSSFeed(ctx context.Context, field g
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddSrcRSSFeed(rctx, args["feedLink"].(string))
+		return ec.resolvers.Mutation().AddSrcRSSFeed(rctx, args["feedLink"].(string), args["targetFeedID"].(int64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

@@ -302,7 +302,7 @@ type DeleteResponse {
 
 type Mutation {
   addUserFeed(input: AddUserFeedInput!): UserFeed!
-  addSrcRSSFeed(feedLink: String!): SrcRSSFeed!
+  addSrcRSSFeed(feedLink: String!, targetFeedID: ID!): SrcRSSFeed!
   addSource(input: AddSourceInput!): FeedSubscription!
   deleteSubscription(srcRSSFeedID: ID!): DeleteResponse!
   register(input: RegisterInput!): AuthResponse!

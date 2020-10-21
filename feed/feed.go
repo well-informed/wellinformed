@@ -24,10 +24,12 @@ func (f feedService) ServeContent(ctx context.Context, userFeed *model.UserFeed)
 	if err != nil {
 		return nil, err
 	}
+	log.Tracef("Got feed subscription for feedID %v: %+v", userFeed.ID, subscriptions)
 	engine, err := f.db.GetEngineByID(userFeed.EngineID)
 	if err != nil {
 		return nil, err
 	}
+	log.Tracef("Got engine to serve content: %+v", engine)
 
 	var contentItems []*model.ContentItem
 	var srcRSSFeeds []*model.SrcRSSFeed
@@ -42,6 +44,7 @@ func (f feedService) ServeContent(ctx context.Context, userFeed *model.UserFeed)
 			if err != nil {
 				return nil, err
 			}
+			log.Tracef("found %v sourceContentItems from subscribed userFeed %v", len(sourceContentItems), sub.SourceID)
 			contentItems = append(contentItems, sourceContentItems...)
 		} else if sub.SourceType == model.SourceTypeSrcRSSFeed {
 			log.Debug("sub source ID: ", sub.SourceID)

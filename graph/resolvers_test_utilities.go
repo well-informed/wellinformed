@@ -31,8 +31,9 @@ func NewTestHarness(dbName string) (*Resolver, *sqlx.DB) {
 		DBName:     dbName, //dbname cannot be capitalized
 		DBUser:     "postgres",
 		DBPassword: "password",
-		LogLevel:   log.FatalLevel,
+		LogLevel:   log.InfoLevel,
 	}
+	log.SetLevel(conf.LogLevel)
 	db, sqlxDB := NewTestDB(conf)
 	rssHandler := rss.NewRSS()
 	sub, err := subscriber.NewSubscriber(rssHandler, db)
@@ -133,7 +134,7 @@ func AddStockSrcRSSFeeds(resolver *Resolver, ctx context.Context) (srcRSSFeeds [
 		"https://www.lesswrong.com/feed.xml?view=curated-rss&karmaThreshold=2",
 	}
 	for _, v := range testSrcRSSFeeds {
-		srcRSSFeed, err := resolver.Mutation().AddSrcRSSFeed(ctx, v)
+		srcRSSFeed, err := resolver.Mutation().AddSrcRSSFeed(ctx, v, 1)
 		srcRSSFeeds = append(srcRSSFeeds, srcRSSFeed)
 		errs = append(errs, err)
 	}
