@@ -19,3 +19,15 @@ In order to add new files to the database/migrations directory which are automat
 migrate create -ext sql -dir database/migrations -seq $MIGRATION_NAME
 ```
 
+## Fix a Dirty Migration State
+With golang-migrate installed on your machine and access to the postgres database run the following to clear out the dirty state so you can run migrations again.
+```
+migrate -path database/migrations -database "postgres://edyn:MPyDqCs4NCcCRe@edyn.c7xblzysdvfi.us-east-2.rds.amazonaws.com/edyn?sslmode=disable" force $LASTGOODVERSION
+```
+
+## Manually run DB Migration
+This manually runs a migration so the error messages can be more easily checked in the case of a failed migration. This is equivalent to the migration step that is run internally when a new version is deployed through CI/CD
+
+```
+migrate -path database/migrations -database "postgres://edyn:MPyDqCs4NCcCRe@edyn.c7xblzysdvfi.us-east-2.rds.amazonaws.com/edyn?sslmode=disable" up
+```

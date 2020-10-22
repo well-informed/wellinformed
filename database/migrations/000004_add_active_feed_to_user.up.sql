@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS feed_subscriptions
 );
 
 ALTER TABLE users
-  ADD COLUMN active_user_feed varchar NOT NULL;
+  ADD COLUMN active_user_feed varchar;
 
 ALTER TABLE users
   DROP COLUMN active_preference_set;
