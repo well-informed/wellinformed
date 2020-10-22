@@ -49,7 +49,7 @@ jobs:
       run: |
         chmod 400 ./.ssh/edyn.pem
         CPID=$(ssh -o StrictHostKeyChecking=no -A -i ./.ssh/edyn.pem ec2-user@ec2-18-225-34-205.us-east-2.compute.amazonaws.com "ps --no-heading -C wellinformed" | awk '{ print $1 }')
-        ssh -o StrictHostKeyChecking=no -A -i ./.ssh/edyn.pem ec2-user@ec2-18-225-34-205.us-east-2.compute.amazonaws.com "sudo kill -9 $CPID"
+        ssh -o StrictHostKeyChecking=no -A -i ./.ssh/edyn.pem ec2-user@ec2-18-225-34-205.us-east-2.compute.amazonaws.com "sudo kill -9 $CPID || exit 0"
         RELEASE=$(date +%F_%H_%M_%S)
         echo "Starting Wellinformed Server (Version $RELEASE)"
         ssh -o StrictHostKeyChecking=no -A -i ./.ssh/edyn.pem ec2-user@ec2-18-225-34-205.us-east-2.compute.amazonaws.com "mkdir releases/$RELEASE"
