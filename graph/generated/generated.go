@@ -257,7 +257,6 @@ type ComplexityRoot struct {
 }
 
 type ContentItemResolver interface {
-	SourceType(ctx context.Context, obj *model.ContentItem) (string, error)
 	Interaction(ctx context.Context, obj *model.ContentItem, input *model.ContentItemInteractionsInput) (*model.Interaction, error)
 }
 type EngineResolver interface {
@@ -1464,7 +1463,7 @@ type ContentItem {
   guid: String
   imageTitle: String
   imageURL: String
-  sourceType: String!
+  sourceType: SourceType!
   interaction(input: ContentItemInteractionsInput): Interaction
 }
 
@@ -2637,13 +2636,13 @@ func (ec *executionContext) _ContentItem_sourceType(ctx context.Context, field g
 		Object:   "ContentItem",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.ContentItem().SourceType(rctx, obj)
+		return obj.SourceType, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2655,9 +2654,9 @@ func (ec *executionContext) _ContentItem_sourceType(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(model.SourceType)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNSourceType2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐSourceType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ContentItem_interaction(ctx context.Context, field graphql.CollectedField, obj *model.ContentItem) (ret graphql.Marshaler) {
@@ -8126,19 +8125,10 @@ func (ec *executionContext) _ContentItem(ctx context.Context, sel ast.SelectionS
 		case "imageURL":
 			out.Values[i] = ec._ContentItem_imageURL(ctx, field, obj)
 		case "sourceType":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ContentItem_sourceType(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._ContentItem_sourceType(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "interaction":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {

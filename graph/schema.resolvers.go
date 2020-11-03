@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 
 	log "github.com/sirupsen/logrus"
@@ -15,10 +14,6 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 	page "github.com/well-informed/wellinformed/pagination"
 )
-
-func (r *contentItemResolver) SourceType(ctx context.Context, obj *model.ContentItem) (string, error) {
-	panic(fmt.Errorf("not implemented"))
-}
 
 func (r *contentItemResolver) Interaction(ctx context.Context, obj *model.ContentItem, input *model.ContentItemInteractionsInput) (*model.Interaction, error) {
 	var userIdToUse int64
