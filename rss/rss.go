@@ -82,5 +82,6 @@ func convertToModelContentItem(item *gofeed.Item, feed *gofeed.Feed) *model.Cont
 		GUID:        &item.GUID,
 		ImageTitle:  imageTitle,
 		ImageURL:    imageURL,
+		SourceType:  model.SourceTypeSrcRSSFeed,
 	}
 }

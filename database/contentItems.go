@@ -24,8 +24,9 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 		author,
 		guid,
 		image_title,
-		image_url)
-	values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		image_url,
+		source_type)
+	values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 	ON CONFLICT DO NOTHING
 	RETURNING id`)
 	if err != nil {
@@ -48,6 +49,7 @@ func (db DB) InsertContentItem(contentItem model.ContentItem) (*model.ContentIte
 		contentItem.GUID,
 		contentItem.ImageTitle,
 		contentItem.ImageURL,
+		contentItem.SourceType,
 	).Scan(&id)
 	if err != nil && err != sql.ErrNoRows {
 		log.Error("failed to insert row to content_items. err: ", err)
@@ -77,9 +79,10 @@ func (db DB) GetContentItem(id int64) (*model.ContentItem, error) {
 		&contentItem.GUID,
 		&contentItem.ImageTitle,
 		&contentItem.ImageURL,
+		&contentItem.SourceType,
 	)
 	if err != nil {
-		log.Errorf("failed to select content_item. err: err")
+		log.Errorf("failed to select content_item. err: ", err)
 		return nil, err
 	}
 	return &contentItem, nil
