@@ -82,7 +82,7 @@ func (db DB) GetContentItem(id int64) (*model.ContentItem, error) {
 		&contentItem.SourceType,
 	)
 	if err != nil {
-		log.Errorf("failed to select content_item. err: ", err)
+		log.Error("failed to select content_item. err: ", err)
 		return nil, err
 	}
 	return &contentItem, nil
@@ -119,6 +119,7 @@ func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model
 			&contentItem.GUID,
 			&contentItem.ImageTitle,
 			&contentItem.ImageURL,
+			&contentItem.SourceType,
 		)
 		if err != nil {
 			log.Error("error with scan. err: ", err)
