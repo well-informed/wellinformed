@@ -82,7 +82,7 @@ type ContentItem {
   guid: String
   imageTitle: String
   imageURL: String
-  sourceType: String!
+  sourceType: SourceType!
   interaction(input: ContentItemInteractionsInput): Interaction
 }
 
