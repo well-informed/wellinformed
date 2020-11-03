@@ -97,6 +97,11 @@ func (r *mutationResolver) AddUserFeed(ctx context.Context, input model.AddUserF
 		log.Error("could not create new userFeed. err: ", err)
 		return nil, err
 	}
+	err = r.switchActiveUserFeed(user, createdUserFeed.ID)
+	if err != nil {
+		log.Error("could not switch active user feed")
+		return nil, err
+	}
 	return createdUserFeed, nil
 }
 
