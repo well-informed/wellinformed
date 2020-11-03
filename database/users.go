@@ -36,7 +36,7 @@ func (db DB) GetUserByID(value int64) (*model.User, error) {
 	return db.getUserByField("*", "id = $1", value)
 }
 
-func (db DB) CreateUser(user model.User) (model.User, error) {
+func (db DB) CreateUser(user *model.User) (*model.User, error) {
 	stmt, err := db.Prepare(`INSERT INTO users
 	( email,
 		first_name,
@@ -51,7 +51,7 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 		`)
 	if err != nil {
 		log.Error("failed to prepare user insert: ", err)
-		return user, err
+		return nil, err
 	}
 
 	var ID int64
@@ -67,13 +67,13 @@ func (db DB) CreateUser(user model.User) (model.User, error) {
 	).Scan(&ID)
 	if err != nil {
 		log.Error("failed to insert row to create user. err: ", err)
-		return user, err
+		return nil, err
 	}
 	user.ID = ID
 	return user, nil
 }
 
-func (db DB) UpdateUser(user model.User) (model.User, error) {
+func (db DB) UpdateUser(user *model.User) (*model.User, error) {
 	stmt := `UPDATE users SET
 	email = $1,
 	first_name = $2,
@@ -96,7 +96,7 @@ func (db DB) UpdateUser(user model.User) (model.User, error) {
 		user.ID).Scan(&user.UpdatedAt)
 	if err != nil {
 		log.Error("failed to update user: err: ", err)
-		return user, err
+		return nil, err
 	}
 	return user, nil
 }

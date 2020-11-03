@@ -92,7 +92,7 @@ func (r *mutationResolver) AddUserFeed(ctx context.Context, input model.AddUserF
 		log.Error("could not create new userFeed. err: ", err)
 		return nil, err
 	}
-	err = r.switchActiveUserFeed(user, createdUserFeed.ID)
+	_, err = r.switchActiveUserFeed(user, createdUserFeed.ID)
 	if err != nil {
 		log.Error("could not switch active user feed")
 		return nil, err
@@ -221,6 +221,18 @@ func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.Int
 
 func (r *mutationResolver) SaveEngine(ctx context.Context, engine model.EngineInput) (*model.Engine, error) {
 	return r.UserService.SaveEngine(ctx, &engine)
+}
+
+func (r *mutationResolver) SwitchActiveUserFeed(ctx context.Context, feedID int64) (*model.User, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	user, err = r.switchActiveUserFeed(user, feedID)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {

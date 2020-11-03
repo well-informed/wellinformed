@@ -150,14 +150,15 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddSource          func(childComplexity int, input model.AddSourceInput) int
-		AddSrcRSSFeed      func(childComplexity int, feedLink string, targetFeedID int64) int
-		AddUserFeed        func(childComplexity int, input model.AddUserFeedInput) int
-		DeleteSubscription func(childComplexity int, srcRssfeedID int64) int
-		Login              func(childComplexity int, input model.LoginInput) int
-		Register           func(childComplexity int, input model.RegisterInput) int
-		SaveEngine         func(childComplexity int, engine model.EngineInput) int
-		SaveInteraction    func(childComplexity int, input *model.InteractionInput) int
+		AddSource            func(childComplexity int, input model.AddSourceInput) int
+		AddSrcRSSFeed        func(childComplexity int, feedLink string, targetFeedID int64) int
+		AddUserFeed          func(childComplexity int, input model.AddUserFeedInput) int
+		DeleteSubscription   func(childComplexity int, srcRssfeedID int64) int
+		Login                func(childComplexity int, input model.LoginInput) int
+		Register             func(childComplexity int, input model.RegisterInput) int
+		SaveEngine           func(childComplexity int, engine model.EngineInput) int
+		SaveInteraction      func(childComplexity int, input *model.InteractionInput) int
+		SwitchActiveUserFeed func(childComplexity int, feedID int64) int
 	}
 
 	Query struct {
@@ -279,6 +280,7 @@ type MutationResolver interface {
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthResponse, error)
 	SaveInteraction(ctx context.Context, input *model.InteractionInput) (*model.ContentItem, error)
 	SaveEngine(ctx context.Context, engine model.EngineInput) (*model.Engine, error)
+	SwitchActiveUserFeed(ctx context.Context, feedID int64) (*model.User, error)
 }
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
@@ -830,6 +832,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SaveInteraction(childComplexity, args["input"].(*model.InteractionInput)), true
+
+	case "Mutation.switchActiveUserFeed":
+		if e.complexity.Mutation.SwitchActiveUserFeed == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_switchActiveUserFeed_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SwitchActiveUserFeed(childComplexity, args["feedID"].(int64)), true
 
 	case "Query.engines":
 		if e.complexity.Query.Engines == nil {
@@ -1690,6 +1704,7 @@ type Mutation {
   login(input: LoginInput!): AuthResponse!
   saveInteraction(input: InteractionInput): ContentItem!
   saveEngine(engine: EngineInput!): Engine!
+  switchActiveUserFeed(feedID: ID!): User!
 }
 `, BuiltIn: false},
 }
@@ -1830,6 +1845,20 @@ func (ec *executionContext) field_Mutation_saveInteraction_args(ctx context.Cont
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_switchActiveUserFeed_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int64
+	if tmp, ok := rawArgs["feedID"]; ok {
+		arg0, err = ec.unmarshalNID2int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["feedID"] = arg0
 	return args, nil
 }
 
@@ -4275,6 +4304,47 @@ func (ec *executionContext) _Mutation_saveEngine(ctx context.Context, field grap
 	res := resTmp.(*model.Engine)
 	fc.Result = res
 	return ec.marshalNEngine2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐEngine(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_switchActiveUserFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_switchActiveUserFeed_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SwitchActiveUserFeed(rctx, args["feedID"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_srcRSSFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -8647,6 +8717,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "saveEngine":
 			out.Values[i] = ec._Mutation_saveEngine(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "switchActiveUserFeed":
+			out.Values[i] = ec._Mutation_switchActiveUserFeed(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

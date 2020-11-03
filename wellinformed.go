@@ -31,8 +31,8 @@ type Persistor interface {
 	GetUserByEmail(email string) (*model.User, error)
 	GetUserByUsername(username string) (*model.User, error)
 	GetUserByID(id int64) (*model.User, error)
-	CreateUser(user model.User) (model.User, error)
-	UpdateUser(user model.User) (model.User, error)
+	CreateUser(user *model.User) (*model.User, error)
+	UpdateUser(user *model.User) (*model.User, error)
 
 	// UserFeed
 	CreateUserFeed(userFeed *model.UserFeed) (*model.UserFeed, error)

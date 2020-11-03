@@ -55,7 +55,7 @@ func TestUserSQL(t *testing.T) {
 	}
 	opt := cmpopts.IgnoreFields(model.User{}, "ID", "CreatedAt", "UpdatedAt")
 
-	returnedUser, err := db.CreateUser(*user)
+	returnedUser, err := db.CreateUser(user)
 	if err != nil {
 		t.Error("error creating user: ", err)
 	}

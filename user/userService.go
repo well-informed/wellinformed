@@ -74,7 +74,7 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 	//TODO wrap these two statements in a transaction
 	//Transaction starts here
 
-	createdUser, err := u.db.CreateUser(*user)
+	createdUser, err := u.db.CreateUser(user)
 	if err != nil {
 		log.Printf("error creating a user: %v", err)
 		return nil, err
@@ -113,7 +113,7 @@ func (u *UserService) Register(ctx context.Context, input model.RegisterInput) (
 
 	return &model.AuthResponse{
 		AuthToken: token,
-		User:      &createdUser,
+		User:      createdUser,
 	}, nil
 }
 
