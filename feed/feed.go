@@ -20,6 +20,7 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 
 //TODO: fix this once data is all in place.
 func (f feedService) ServeContent(ctx context.Context, userFeed *model.UserFeed) ([]*model.ContentItem, error) {
+	//Get the feeds subscriptions and it's associated curation engine
 	subscriptions, err := f.db.ListFeedSubscriptionsByFeedID(userFeed.ID)
 	if err != nil {
 		return nil, err

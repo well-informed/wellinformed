@@ -148,12 +148,12 @@ func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortT
 		log.Debug("got source: ", src)
 		srcIDs = append(srcIDs, src.ID)
 	}
-	var order string
-	if sortType == model.SortTypeChronological {
-		order = "ORDER BY published DESC"
-	} else if sortType == model.SortTypeSourceName {
-		order = "ORDER BY source_title DESC"
-	}
+	// var order string
+	// if sortType == model.SortTypeChronological {
+	// 	order = "ORDER BY published DESC"
+	// } else if sortType == model.SortTypeSourceName {
+	// 	order = "ORDER BY source_title DESC"
+	// }
 	//Set up selection of source values
 	query, args, err := sqlx.In("SELECT * FROM content_items WHERE source_id IN (?) ", srcIDs)
 	if err != nil {
@@ -175,8 +175,8 @@ func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortT
 		args = append(args, end_dt)
 	}
 
-	//Add sorting
-	query = query + order
+	// //Add sorting
+	// query = query
 
 	//rebind with postgres style parameters
 	query = db.Rebind(query)
