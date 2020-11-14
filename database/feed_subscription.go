@@ -1,12 +1,16 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
+//Creates an association between a userFeed and a source to establish a subscription.
+//Idempotent Operation:
+//Adding a subscription that already exists will be ignored and not considered an error
 func (db DB) CreateFeedSubscription(feedID int64, sourceID int64, sourceType model.SourceType) (*model.FeedSubscription, error) {
 	stmt := `INSERT INTO feed_subscriptions
 	( feed_id,
@@ -16,6 +20,7 @@ func (db DB) CreateFeedSubscription(feedID int64, sourceID int64, sourceType mod
 		updated_at
 	)
 		VALUES($1,$2,$3,$4,$5)
+		ON CONFLICT DO NOTHING
 		RETURNING id, created_at, updated_at`
 
 	var ID int64
@@ -28,7 +33,7 @@ func (db DB) CreateFeedSubscription(feedID int64, sourceID int64, sourceType mod
 		time.Now(),
 		time.Now(),
 	).Scan(&ID, &createdAt, &updatedAt)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		log.Error("failed to create feed subscription. err: ", err)
 		return nil, err
 	}

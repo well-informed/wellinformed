@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"net/url"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
@@ -101,39 +100,23 @@ func (r *mutationResolver) AddUserFeed(ctx context.Context, input model.AddUserF
 }
 
 func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string, targetFeedID int64) (*model.SrcRSSFeed, error) {
-	user, err := auth.GetCurrentUserFromCTX(ctx)
+	_, err := auth.GetCurrentUserFromCTX(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	var srcRSSFeed *model.SrcRSSFeed
-	link, err := url.Parse(feedLink)
-	if err != nil {
-		log.Error("couldn't parse feedLink: ", feedLink)
-		return nil, errors.New("couldn't parse feedLink")
-	}
-	if link.Scheme == "" {
-		link.Scheme = "https"
-	}
-	feedLink = link.String()
 
-	existingFeed, err := r.DB.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
+	feedLink, err = cleanUserFeedLinkInput(feedLink)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("existingFeed: ", existingFeed)
-	log.Debugf("user: %v", user)
 
-	//TODO: Revise the sub interface to handle only the global subscription to the SrcRSSFeed
-	//and not the database structures
-	if existingFeed != nil {
-		srcRSSFeed = existingFeed
-		// _, err := r.Sub.AddUserSubscription(user, existingFeed)
-		// if err != nil {
-		// 	return existingFeed, err
-		// }
-		// return existingFeed, nil
-	} else {
+	srcRSSFeed, exists, err := r.checkForExistingRSSFeed(feedLink)
+	if err != nil {
+		log.Error("could not check existing srcRSSFeeds for AddSrcRSSFeed. err: ", err)
+	}
+	if !exists {
+		log.Debug("did not find existing SrcRSSFeed, subscribing to new link: ", feedLink)
 		srcRSSFeed, err = r.Sub.SubscribeToRSSFeed(ctx, feedLink)
 		if err != nil {
 			return nil, err
@@ -148,7 +131,8 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string, t
 	//Add Feed Subscription properly so that serveContent will work with actual Source feeds
 	_, err = r.DB.CreateFeedSubscription(targetFeedID, srcRSSFeed.ID, model.SourceTypeSrcRSSFeed)
 	if err != nil {
-		log.Errorf("unable to create feed subscription between target feed: %v and sourceRSSFeed: %+v", targetFeedID, srcRSSFeed)
+		log.Errorf("unable to create feed subscription between target feed: %v and sourceRSSFeed: %+v. err: %v", targetFeedID, srcRSSFeed, err)
+		return srcRSSFeed, err
 	}
 	return srcRSSFeed, nil
 }
