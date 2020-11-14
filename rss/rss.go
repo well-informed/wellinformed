@@ -9,6 +9,8 @@ import (
 	"github.com/well-informed/wellinformed/graph/model"
 )
 
+//RSS encapsulates the gofeed dependency and conversion from gofeed's RSS data model
+//to Edyn's internal data model.
 type RSS struct {
 	*gofeed.Parser
 }
