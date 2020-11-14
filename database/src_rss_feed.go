@@ -77,7 +77,7 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 		return nil, nil
 	}
 	log.Debugf("Selected feed with whereClause %v with key %v: %v", whereClause, arg, feed)
-	return &feed, err
+	return &feed, nil
 }
 
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
