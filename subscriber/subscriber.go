@@ -16,8 +16,10 @@ type subscriber struct {
 	updateInterval time.Duration
 }
 
-//NewSubscriber provides a persistent service that allows the application to regularly check for updates to
-//subscribed RSS feeds
+//NewSubscriber encapsulates the application level subscriptions to RSS feeds. (It does not handle individual user's subscriptions to feeds, though these may trigger calls to subscriber)
+//When a user action triggers a new RSS subscription Subscriber will create a persistent goroutine that handles
+//regularly updating that RSS feed's contents. Subscriber will check if the new feed link already exists in the database, and will not create duplicates
+//On program startup, NewSubscriber reads all of the existing source rss feeds in the database and starts an update subscriber routine on each of them.
 func NewSubscriber(rss wellinformed.RSS, db wellinformed.Persistor) (*subscriber, error) {
 	sub := &subscriber{
 		rss:            rss,
@@ -86,7 +88,7 @@ func (sub *subscriber) updateSrcRSSFeed(ctx context.Context, feedLink string) (*
 	var storedFeed *model.SrcRSSFeed
 	storedFeed, err = sub.db.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
 	if err != nil {
-		log.Info("did not find existing feed for link: %v, err: ", feedLink, err)
+		log.Infof("did not find existing feed for link: %v, err: %v", feedLink, err)
 		return nil, err
 	}
 	if storedFeed == nil {
