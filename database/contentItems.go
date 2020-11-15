@@ -135,7 +135,7 @@ func (db DB) listContentItemsByQuery(stmt string, args ...interface{}) ([]*model
 	return contentItems, nil
 }
 
-func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortType, start_dt *time.Time, end_dt *time.Time) ([]*model.ContentItem, error) {
+func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, start_dt *time.Time, end_dt *time.Time) ([]*model.ContentItem, error) {
 	contentItems := make([]*model.ContentItem, 0)
 	//Check for empty source list
 	if len(srcList) == 0 {
@@ -148,12 +148,7 @@ func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortT
 		log.Debug("got source: ", src)
 		srcIDs = append(srcIDs, src.ID)
 	}
-	// var order string
-	// if sortType == model.SortTypeChronological {
-	// 	order = "ORDER BY published DESC"
-	// } else if sortType == model.SortTypeSourceName {
-	// 	order = "ORDER BY source_title DESC"
-	// }
+
 	//Set up selection of source values
 	query, args, err := sqlx.In("SELECT * FROM content_items WHERE source_id IN (?) ", srcIDs)
 	if err != nil {
@@ -175,9 +170,6 @@ func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortT
 		args = append(args, end_dt)
 	}
 
-	// //Add sorting
-	// query = query
-
 	//rebind with postgres style parameters
 	query = db.Rebind(query)
 
@@ -188,7 +180,6 @@ func (db DB) ServeContentItems(srcList []*model.SrcRSSFeed, sortType model.SortT
 		return nil, err
 	}
 	return contentItems, nil
-
 }
 
 func (db DB) GetContentItemByInteraction(interactionId int64) (*model.ContentItem, error) {
