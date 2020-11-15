@@ -2,6 +2,7 @@ package feed
 
 import (
 	"context"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed"
@@ -20,6 +21,7 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 
 //TODO: fix this once data is all in place.
 func (f feedService) ServeContent(ctx context.Context, userFeed *model.UserFeed) ([]*model.ContentItem, error) {
+	//Get the feeds subscriptions and it's associated curation engine
 	subscriptions, err := f.db.ListFeedSubscriptionsByFeedID(userFeed.ID)
 	if err != nil {
 		return nil, err
@@ -63,15 +65,39 @@ func (f feedService) ServeContent(ctx context.Context, userFeed *model.UserFeed)
 	//Grab all the unique content items from the userFeeds' SrcRSSFeeds
 	//Pass it all through the engine...
 
-	srcContentItems, err := f.db.ServeContentItems(srcRSSFeeds, engine.Sort, engine.StartDate, engine.EndDate)
+	srcContentItems, err := f.db.ServeContentItems(srcRSSFeeds, engine.StartDate, engine.EndDate)
 	if err != nil {
 		log.Error("could not serve feed. err: ", err)
 	}
 	log.Debug("length of srcContentItems: ", len(srcContentItems))
 	//Combine with source UserFeeds content
 	contentItems = append(srcContentItems, contentItems...)
-	//Sort it again?
-	//TODO SORT AND FILTER THIS SHIT
+
+	applyEngineSort(engine, contentItems)
+
 	log.Debug("length of contentItems: ", len(contentItems))
 	return contentItems, nil
+}
+
+//Sorts supplied contentItems slice in place using whichever sort is configured on the engine
+func applyEngineSort(engine *model.Engine, contentItems []*model.ContentItem) {
+	if engine.Sort == model.SortTypeChronological {
+		log.Debug("applying chronological sort to contentItems for feed")
+		applyChronologicalSort(contentItems)
+	} else if engine.Sort == model.SortTypeSourceName {
+		log.Debug("applying lexicographic sort to contentItems for feed")
+		applySourceNameLexicographicSort(contentItems)
+	}
+}
+
+func applyChronologicalSort(contentItems []*model.ContentItem) {
+	sort.Slice(contentItems, func(i, j int) bool {
+		return contentItems[i].Published.After(*contentItems[j].Published)
+	})
+}
+
+func applySourceNameLexicographicSort(contentItems []*model.ContentItem) {
+	sort.Slice(contentItems, func(i, j int) bool {
+		return contentItems[i].SourceTitle < contentItems[j].SourceTitle
+	})
 }
