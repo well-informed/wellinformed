@@ -86,7 +86,7 @@ func (sub *subscriber) updateSrcRSSFeed(ctx context.Context, feedLink string) (*
 		return nil, err
 	}
 	var storedFeed *model.SrcRSSFeed
-	storedFeed, err = sub.db.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
+	storedFeed, err = sub.db.GetSrcRSSFeedByFeedLink(feedLink)
 	if err != nil {
 		log.Infof("did not find existing feed for link: %v, err: %v", feedLink, err)
 		return nil, err

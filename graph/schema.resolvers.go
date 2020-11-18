@@ -45,9 +45,7 @@ func (r *feedSubscriptionResolver) UserFeed(ctx context.Context, obj *model.Feed
 
 func (r *feedSubscriptionResolver) Source(ctx context.Context, obj *model.FeedSubscription) (model.Feed, error) {
 	if obj.SourceType == model.SourceTypeSrcRSSFeed {
-		//TODO: Fix GetSrcRSSFeed to require one value instead of an input struct
-		input := model.SrcRSSFeedInput{ID: &obj.SourceID}
-		return r.DB.GetSrcRSSFeed(input)
+		return r.DB.GetSrcRSSFeedByID(obj.SourceID)
 	} else if obj.SourceType == model.SourceTypeUserFeed {
 		return r.DB.GetUserFeedByID(obj.SourceID)
 	}
@@ -224,11 +222,21 @@ func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedI
 	if err != nil {
 		return nil, err
 	}
-	feed, err := r.DB.GetSrcRSSFeed(*input)
+
+	var feed *model.SrcRSSFeed
+	if input.ID != nil {
+		feed, err = r.DB.GetSrcRSSFeedByID(*input.ID)
+	} else if input.Link != nil {
+		feed, err = r.DB.GetSrcRSSFeedByLink(*input.Link)
+	} else if input.FeedLink != nil {
+		feed, err = r.DB.GetSrcRSSFeedByFeedLink(*input.FeedLink)
+	} else {
+		return nil, errors.New("no SrcRSSFeedInput key found")
+	}
 	if err != nil {
 		return nil, err
 	}
-	log.Info("retrieved feed: ", feed)
+	log.Debug("retrieved feed: ", feed)
 	if feed == nil {
 		return nil, errors.New("srcRSSFeed not found")
 	}
@@ -435,8 +443,7 @@ func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubs
 }
 
 func (r *userSubscriptionResolver) SrcRSSFeed(ctx context.Context, obj *model.UserSubscription) (*model.SrcRSSFeed, error) {
-	input := model.SrcRSSFeedInput{ID: &obj.SrcRSSFeedID}
-	src, err := r.DB.GetSrcRSSFeed(input)
+	src, err := r.DB.GetSrcRSSFeedByID(obj.SrcRSSFeedID)
 	if err != nil {
 		return nil, err
 	}

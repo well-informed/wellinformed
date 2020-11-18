@@ -11,7 +11,10 @@ type Persistor interface {
 
 	// SrcRSSFeed
 	InsertSrcRSSFeed(model.SrcRSSFeed) (*model.SrcRSSFeed, error)
-	GetSrcRSSFeed(model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
+	// GetSrcRSSFeed(model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
+	GetSrcRSSFeedByID(id int64) (*model.SrcRSSFeed, error)
+	GetSrcRSSFeedByLink(link string) (*model.SrcRSSFeed, error)
+	GetSrcRSSFeedByFeedLink(feedLink string) (*model.SrcRSSFeed, error)
 	ListSrcRSSFeeds() ([]*model.SrcRSSFeed, error)
 	ListSrcRSSFeedsByUser(*model.User) ([]*model.SrcRSSFeed, error)
 

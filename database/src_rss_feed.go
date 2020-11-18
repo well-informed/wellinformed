@@ -80,6 +80,39 @@ func (db DB) GetSrcRSSFeed(input model.SrcRSSFeedInput) (*model.SrcRSSFeed, erro
 	return &feed, nil
 }
 
+func (db DB) GetSrcRSSFeedByID(id int64) (*model.SrcRSSFeed, error) {
+	return db.getSrcRSSFeed(`id`, id)
+}
+
+func (db DB) GetSrcRSSFeedByLink(link string) (*model.SrcRSSFeed, error) {
+	return db.getSrcRSSFeed(`link`, link)
+}
+
+func (db DB) GetSrcRSSFeedByFeedLink(feedLink string) (*model.SrcRSSFeed, error) {
+	return db.getSrcRSSFeed(`feed_link`, feedLink)
+}
+
+func (db DB) getSrcRSSFeed(whereField string, arg interface{}) (*model.SrcRSSFeed, error) {
+	var feed model.SrcRSSFeed
+
+	stmt := `SELECT * FROM src_rss_feeds WHERE ` + whereField + ` = $1`
+	err := db.QueryRow(stmt, arg).Scan(
+		&feed.ID,
+		&feed.Title,
+		&feed.Description,
+		&feed.Link,
+		&feed.FeedLink,
+		&feed.Updated,
+		&feed.LastFetchedAt,
+		&feed.Language,
+		&feed.Generator)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	log.Debugf("Selected feed with query with key %v: %v", stmt, arg, feed)
+	return &feed, nil
+}
+
 func (db DB) ListSrcRSSFeedsByUser(user *model.User) ([]*model.SrcRSSFeed, error) {
 	stmt := `SELECT src_rss_feeds.*
 	FROM src_rss_feeds
