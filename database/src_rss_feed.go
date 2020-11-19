@@ -109,7 +109,7 @@ func (db DB) getSrcRSSFeed(whereField string, arg interface{}) (*model.SrcRSSFee
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	log.Debugf("Selected feed with query with key %v: %v", stmt, arg, feed)
+	log.Debugf("Selected feed with query %v with key %v: %v", stmt, arg, feed)
 	return &feed, nil
 }
 
