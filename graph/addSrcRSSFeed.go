@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"strings"
@@ -8,6 +9,36 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/graph/model"
 )
+
+func (r *mutationResolver) addSrcRSSFeed(ctx context.Context, feedLink string, targetFeedID int64) (*model.SrcRSSFeed, error) {
+	var srcRSSFeed *model.SrcRSSFeed
+
+	feedLink, err := cleanUserFeedLinkInput(feedLink)
+	if err != nil {
+		return nil, err
+	}
+
+	//Check if the provided feed URL already exists in the database, and if not, fetch and add it
+	srcRSSFeed, exists, err := r.checkForExistingRSSFeed(feedLink)
+	if err != nil {
+		log.Error("could not check existing srcRSSFeeds for AddSrcRSSFeed. err: ", err)
+	}
+	if !exists {
+		log.Debug("did not find existing SrcRSSFeed, subscribing to new link: ", feedLink)
+		srcRSSFeed, err = r.Sub.SubscribeToRSSFeed(ctx, feedLink)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//Create a subscription for the user who added the new feed
+	_, err = r.DB.CreateFeedSubscription(targetFeedID, srcRSSFeed.ID, model.SourceTypeSrcRSSFeed)
+	if err != nil {
+		log.Errorf("unable to create feed subscription between target feed: %v and sourceRSSFeed: %+v. err: %v", targetFeedID, srcRSSFeed, err)
+		return srcRSSFeed, err
+	}
+	return srcRSSFeed, nil
+}
 
 func cleanUserFeedLinkInput(feedLink string) (string, error) {
 	//parse and massage string to standardize

@@ -102,37 +102,7 @@ func (r *mutationResolver) AddSrcRSSFeed(ctx context.Context, feedLink string, t
 	if err != nil {
 		return nil, err
 	}
-	var srcRSSFeed *model.SrcRSSFeed
-
-	feedLink, err = cleanUserFeedLinkInput(feedLink)
-	if err != nil {
-		return nil, err
-	}
-
-	srcRSSFeed, exists, err := r.checkForExistingRSSFeed(feedLink)
-	if err != nil {
-		log.Error("could not check existing srcRSSFeeds for AddSrcRSSFeed. err: ", err)
-	}
-	if !exists {
-		log.Debug("did not find existing SrcRSSFeed, subscribing to new link: ", feedLink)
-		srcRSSFeed, err = r.Sub.SubscribeToRSSFeed(ctx, feedLink)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// _, err = r.Sub.AddUserSubscription(user, insertedFeed)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	//Add Feed Subscription properly so that serveContent will work with actual Source feeds
-	_, err = r.DB.CreateFeedSubscription(targetFeedID, srcRSSFeed.ID, model.SourceTypeSrcRSSFeed)
-	if err != nil {
-		log.Errorf("unable to create feed subscription between target feed: %v and sourceRSSFeed: %+v. err: %v", targetFeedID, srcRSSFeed, err)
-		return srcRSSFeed, err
-	}
-	return srcRSSFeed, nil
+	return r.addSrcRSSFeed(ctx, feedLink, targetFeedID)
 }
 
 func (r *mutationResolver) AddSource(ctx context.Context, input model.AddSourceInput) (*model.FeedSubscription, error) {
