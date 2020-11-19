@@ -19,7 +19,6 @@ func NewFeedService(db wellinformed.Persistor) *feedService {
 	}
 }
 
-//TODO: fix this once data is all in place.
 func (f feedService) ServeContent(ctx context.Context, userFeed *model.UserFeed) ([]*model.ContentItem, error) {
 	//Get the feeds subscriptions and it's associated curation engine
 	subscriptions, err := f.db.ListFeedSubscriptionsByFeedID(userFeed.ID)
@@ -50,7 +49,7 @@ func (f feedService) ServeContent(ctx context.Context, userFeed *model.UserFeed)
 			contentItems = append(contentItems, sourceContentItems...)
 		} else if sub.SourceType == model.SourceTypeSrcRSSFeed {
 			log.Debug("sub source ID: ", sub.SourceID)
-			srcRSSFeed, err := f.db.GetSrcRSSFeed(model.SrcRSSFeedInput{ID: &sub.SourceID})
+			srcRSSFeed, err := f.db.GetSrcRSSFeedByID(sub.SourceID)
 			if err != nil {
 				return nil, err
 			}

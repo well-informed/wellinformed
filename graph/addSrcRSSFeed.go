@@ -28,8 +28,7 @@ func cleanUserFeedLinkInput(feedLink string) (string, error) {
 //Checks the feedlink with the extension (.xml, .html, etc) stripped and with it kept intact,
 //to ensure that a matching feed is found when it should be.
 func (r *mutationResolver) checkForExistingRSSFeed(feedLink string) (*model.SrcRSSFeed, bool, error) {
-	//TODO: shave off .xml from end of these strings so that strings match was src library stores in database
-	existingFeed, err := r.DB.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &feedLink})
+	existingFeed, err := r.DB.GetSrcRSSFeedByFeedLink(feedLink)
 	if err != nil {
 		return nil, false, err
 	}
@@ -37,9 +36,12 @@ func (r *mutationResolver) checkForExistingRSSFeed(feedLink string) (*model.SrcR
 		log.Debug("found existing RSS feed with link: ", feedLink)
 		return existingFeed, true, nil
 	}
+
+	//Additionally check for feedLink strings with ending extension (e.g. '.xml') stripped off
+	//Required to handle differences between valid links for fetching feed and stored string for feedLink in returned data
 	extStartIdx := strings.LastIndex(feedLink, ".")
 	noExtFeedLink := feedLink[0:extStartIdx]
-	existingFeed, err = r.DB.GetSrcRSSFeed(model.SrcRSSFeedInput{FeedLink: &noExtFeedLink})
+	existingFeed, err = r.DB.GetSrcRSSFeedByFeedLink(noExtFeedLink)
 	if err != nil {
 		return nil, false, err
 	}
