@@ -16,10 +16,11 @@ func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*mode
 		completed,
 		saved_for_later,
 		percent_read,
+		rating,
 		created_at,
 		updated_at
 	)
-	VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	ON CONFLICT (user_id, content_item_id)
 	DO UPDATE SET
 	user_id = $1,
@@ -28,7 +29,8 @@ func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*mode
 	completed = $4,
 	saved_for_later = $5,
 	percent_read = $6,
-	updated_at = $7
+	rating = $7,
+	updated_at = $8
 	RETURNING id, created_at, updated_at`
 	var ID int64
 	var CreatedAt time.Time
@@ -40,6 +42,7 @@ func (db DB) SaveInteraction(userID int64, input *model.InteractionInput) (*mode
 		input.Completed,
 		input.SavedForLater,
 		input.PercentRead,
+		input.Rating,
 		time.Now(),
 		time.Now(),
 	).Scan(&ID, &CreatedAt, &UpdatedAt)

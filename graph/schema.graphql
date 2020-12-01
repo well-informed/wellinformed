@@ -138,6 +138,7 @@ type Interaction {
   completed: Boolean!
   savedForLater: Boolean!
   percentRead: Float!
+  rating: Int
   createdAt: Time!
   updatedAt: Time!
 }
@@ -155,6 +156,7 @@ input InteractionInput {
   completed: Boolean
   savedForLater: Boolean
   percentRead: Float
+  rating: Int
 }
 
 input SrcRSSFeedInput {

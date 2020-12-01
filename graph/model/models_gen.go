@@ -102,6 +102,7 @@ type InteractionInput struct {
 	Completed     *bool     `json:"completed"`
 	SavedForLater *bool     `json:"savedForLater"`
 	PercentRead   *float64  `json:"percentRead"`
+	Rating        *int      `json:"rating"`
 }
 
 type InteractionPageInfo struct {

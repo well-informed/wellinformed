@@ -126,6 +126,7 @@ type ComplexityRoot struct {
 		CreatedAt     func(childComplexity int) int
 		ID            func(childComplexity int) int
 		PercentRead   func(childComplexity int) int
+		Rating        func(childComplexity int) int
 		ReadState     func(childComplexity int) int
 		SavedForLater func(childComplexity int) int
 		UpdatedAt     func(childComplexity int) int
@@ -652,6 +653,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Interaction.PercentRead(childComplexity), true
+
+	case "Interaction.rating":
+		if e.complexity.Interaction.Rating == nil {
+			break
+		}
+
+		return e.complexity.Interaction.Rating(childComplexity), true
 
 	case "Interaction.readState":
 		if e.complexity.Interaction.ReadState == nil {
@@ -1533,6 +1541,7 @@ type Interaction {
   completed: Boolean!
   savedForLater: Boolean!
   percentRead: Float!
+  rating: Int
   createdAt: Time!
   updatedAt: Time!
 }
@@ -1550,6 +1559,7 @@ input InteractionInput {
   completed: Boolean
   savedForLater: Boolean
   percentRead: Float
+  rating: Int
 }
 
 input SrcRSSFeedInput {
@@ -3636,6 +3646,37 @@ func (ec *executionContext) _Interaction_percentRead(ctx context.Context, field 
 	res := resTmp.(*float64)
 	fc.Result = res
 	return ec.marshalNFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Interaction_rating(ctx context.Context, field graphql.CollectedField, obj *model.Interaction) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Interaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Rating, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalOInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Interaction_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Interaction) (ret graphql.Marshaler) {
@@ -7862,6 +7903,12 @@ func (ec *executionContext) unmarshalInputInteractionInput(ctx context.Context, 
 			if err != nil {
 				return it, err
 			}
+		case "rating":
+			var err error
+			it.Rating, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -8538,6 +8585,8 @@ func (ec *executionContext) _Interaction(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "rating":
+			out.Values[i] = ec._Interaction_rating(ctx, field, obj)
 		case "createdAt":
 			out.Values[i] = ec._Interaction_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -10801,6 +10850,29 @@ func (ec *executionContext) marshalOID2ᚖint64(ctx context.Context, sel ast.Sel
 		return graphql.Null
 	}
 	return ec.marshalOID2int64(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOInt2int(ctx context.Context, v interface{}) (int, error) {
+	return graphql.UnmarshalInt(v)
+}
+
+func (ec *executionContext) marshalOInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	return graphql.MarshalInt(v)
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOInt2int(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec.marshalOInt2int(ctx, sel, *v)
 }
 
 func (ec *executionContext) marshalOInteraction2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteraction(ctx context.Context, sel ast.SelectionSet, v model.Interaction) graphql.Marshaler {
