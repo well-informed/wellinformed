@@ -93,6 +93,7 @@ type Interaction struct {
 	Completed     bool      `json:"completed" db:"completed"`
 	SavedForLater bool      `json:"savedForLater" db:"saved_for_later"`
 	PercentRead   *float64  `json:"percentRead" db:"percent_read"`
+	Rating        int       `json:"rating" db:"rating"`
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
 }

@@ -160,15 +160,7 @@ func (r *mutationResolver) SaveInteraction(ctx context.Context, input *model.Int
 	if err != nil {
 		return nil, err
 	}
-	//Ensure optional arguments are set to defaults before insert into DB
-	var f = false
-	if input.Completed == nil {
-		input.Completed = &f
-	}
-	if input.SavedForLater == nil {
-		input.SavedForLater = &f
-	}
-	return r.DB.SaveInteraction(user.ID, input)
+	return r.saveInteraction(user, input)
 }
 
 func (r *mutationResolver) SaveEngine(ctx context.Context, engine model.EngineInput) (*model.Engine, error) {
