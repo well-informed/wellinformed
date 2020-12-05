@@ -120,6 +120,8 @@ type User {
   updatedAt: Time!
   subscriptions(input: UserSubscriptionConnectionInput): UserSubscriptionConnection!
   interactions(readState: ReadState, input: InteractionConnectionInput!): InteractionConnection!
+  follows: [User!]!
+  followers: [User!]!
 }
 
 enum sortType {
@@ -148,6 +150,18 @@ enum ReadState {
   savedForLater
   partiallyRead
   unread
+}
+
+type UserRelationship {
+  id: ID!
+  follower: User!
+  followee: User!
+  createdAt: Time!
+}
+
+input UserRelationshipInput {
+  followerID: ID!
+  followeeID: ID!
 }
 
 input InteractionInput {
@@ -312,4 +326,6 @@ type Mutation {
   saveInteraction(input: InteractionInput): ContentItem!
   saveEngine(engine: EngineInput!): Engine!
   switchActiveUserFeed(feedID: ID!): User!
+  followUser(input: UserRelationshipInput!): UserRelationship!
+  unfollowUser(input: UserRelationshipInput!): DeleteResponse!
 }

@@ -58,6 +58,12 @@ type Persistor interface {
 	// FeedSubscription
 	CreateFeedSubscription(feedID int64, sourceID int64, sourceType model.SourceType) (*model.FeedSubscription, error)
 	ListFeedSubscriptionsByFeedID(feedID int64) ([]*model.FeedSubscription, error)
+
+	//UserRelationship
+	SaveUserRelationship(followerID int64, followeeID int64) (*model.UserRelationship, error)
+	DeleteUserRelationship(followerID int64, followeeID int64) error
+	ListUserRelationshipsByFollowerID(followerID int64) ([]*model.UserRelationship, error)
+	ListUserRelationshipsByFolloweeID(followeeID int64) ([]*model.UserRelationship, error)
 }
 
 type RSS interface {

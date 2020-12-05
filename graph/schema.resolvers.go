@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
@@ -177,6 +178,22 @@ func (r *mutationResolver) SwitchActiveUserFeed(ctx context.Context, feedID int6
 		return nil, err
 	}
 	return user, nil
+}
+
+func (r *mutationResolver) FollowUser(ctx context.Context, input model.UserRelationshipInput) (*model.UserRelationship, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.followUser(ctx, user, input)
+}
+
+func (r *mutationResolver) UnfollowUser(ctx context.Context, input model.UserRelationshipInput) (*model.DeleteResponse, error) {
+	user, err := auth.GetCurrentUserFromCTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.unfollowUser(ctx, user, input)
 }
 
 func (r *queryResolver) SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error) {
@@ -359,6 +376,14 @@ func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readSt
 		return nil, err
 	}
 	return page.BuildInteractionPage(input.First, input.After, interactions)
+}
+
+func (r *userResolver) Follows(ctx context.Context, obj *model.User) ([]*model.User, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *userResolver) Followers(ctx context.Context, obj *model.User) ([]*model.User, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *userFeedResolver) User(ctx context.Context, obj *model.UserFeed) (*model.User, error) {
