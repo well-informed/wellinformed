@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/well-informed/wellinformed/auth"
@@ -379,11 +378,41 @@ func (r *userResolver) Interactions(ctx context.Context, obj *model.User, readSt
 }
 
 func (r *userResolver) Follows(ctx context.Context, obj *model.User) ([]*model.User, error) {
-	panic(fmt.Errorf("not implemented"))
+	userRelationships, err := r.DB.ListUserRelationshipsByFollowerID(obj.ID)
+	if err != nil {
+		log.Errorf("error while reading user relationships. err: ", err)
+	}
+	users := make([]*model.User, 0)
+	if len(userRelationships) != 0 {
+		for _, relationship := range userRelationships {
+			user, err := r.DB.GetUserByID(relationship.Followee)
+			if err != nil {
+				log.Error("could not retrieve users to compile follows list", err)
+				return nil, err
+			}
+			users = append(users, user)
+		}
+	}
+	return users, nil
 }
 
 func (r *userResolver) Followers(ctx context.Context, obj *model.User) ([]*model.User, error) {
-	panic(fmt.Errorf("not implemented"))
+	userRelationships, err := r.DB.ListUserRelationshipsByFolloweeID(obj.ID)
+	if err != nil {
+		log.Errorf("could not list followers for id %v. err: %v", obj.ID, err)
+	}
+	followers := make([]*model.User, 0)
+	if len(userRelationships) != 0 {
+		for _, relationship := range userRelationships {
+			follower, err := r.DB.GetUserByID(relationship.Follower)
+			if err != nil {
+				log.Error("could not retrieve user for followers list: ", err)
+				return nil, err
+			}
+			followers = append(followers, follower)
+		}
+	}
+	return followers, nil
 }
 
 func (r *userFeedResolver) User(ctx context.Context, obj *model.UserFeed) (*model.User, error) {
@@ -416,6 +445,14 @@ func (r *userFeedResolver) IsActive(ctx context.Context, obj *model.UserFeed) (b
 		return true, nil
 	}
 	return false, nil
+}
+
+func (r *userRelationshipResolver) Follower(ctx context.Context, obj *model.UserRelationship) (*model.User, error) {
+	return r.DB.GetUserByID(obj.Follower)
+}
+
+func (r *userRelationshipResolver) Followee(ctx context.Context, obj *model.UserRelationship) (*model.User, error) {
+	return r.DB.GetUserByID(obj.Followee)
 }
 
 func (r *userSubscriptionResolver) User(ctx context.Context, obj *model.UserSubscription) (*model.User, error) {
@@ -466,6 +503,11 @@ func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
 // UserFeed returns generated.UserFeedResolver implementation.
 func (r *Resolver) UserFeed() generated.UserFeedResolver { return &userFeedResolver{r} }
 
+// UserRelationship returns generated.UserRelationshipResolver implementation.
+func (r *Resolver) UserRelationship() generated.UserRelationshipResolver {
+	return &userRelationshipResolver{r}
+}
+
 // UserSubscription returns generated.UserSubscriptionResolver implementation.
 func (r *Resolver) UserSubscription() generated.UserSubscriptionResolver {
 	return &userSubscriptionResolver{r}
@@ -480,4 +522,5 @@ type queryResolver struct{ *Resolver }
 type srcRSSFeedResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
 type userFeedResolver struct{ *Resolver }
+type userRelationshipResolver struct{ *Resolver }
 type userSubscriptionResolver struct{ *Resolver }

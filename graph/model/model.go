@@ -97,3 +97,11 @@ type Interaction struct {
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
 }
+
+type UserRelationship struct {
+	ID        int64     `json:"id"`
+	Follower  int64     `json:"follower" db:"follower_id"`
+	Followee  int64     `json:"followee" db:"followee_id"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}

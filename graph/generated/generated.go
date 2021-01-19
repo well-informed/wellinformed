@@ -46,6 +46,7 @@ type ResolverRoot interface {
 	SrcRSSFeed() SrcRSSFeedResolver
 	User() UserResolver
 	UserFeed() UserFeedResolver
+	UserRelationship() UserRelationshipResolver
 	UserSubscription() UserSubscriptionResolver
 }
 
@@ -242,6 +243,7 @@ type ComplexityRoot struct {
 		Followee  func(childComplexity int) int
 		Follower  func(childComplexity int) int
 		ID        func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
 	}
 
 	UserSubscription struct {
@@ -328,6 +330,10 @@ type UserFeedResolver interface {
 	Subscriptions(ctx context.Context, obj *model.UserFeed) ([]*model.FeedSubscription, error)
 	Engine(ctx context.Context, obj *model.UserFeed) (*model.Engine, error)
 	IsActive(ctx context.Context, obj *model.UserFeed) (bool, error)
+}
+type UserRelationshipResolver interface {
+	Follower(ctx context.Context, obj *model.UserRelationship) (*model.User, error)
+	Followee(ctx context.Context, obj *model.UserRelationship) (*model.User, error)
 }
 type UserSubscriptionResolver interface {
 	User(ctx context.Context, obj *model.UserSubscription) (*model.User, error)
@@ -1334,6 +1340,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.UserRelationship.ID(childComplexity), true
 
+	case "UserRelationship.updatedAt":
+		if e.complexity.UserRelationship.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.UserRelationship.UpdatedAt(childComplexity), true
+
 	case "UserSubscription.createdAt":
 		if e.complexity.UserSubscription.CreatedAt == nil {
 			break
@@ -1641,6 +1654,7 @@ type UserRelationship {
   follower: User!
   followee: User!
   createdAt: Time!
+  updatedAt: Time!
 }
 
 input UserRelationshipInput {
@@ -6532,13 +6546,13 @@ func (ec *executionContext) _UserRelationship_follower(ctx context.Context, fiel
 		Object:   "UserRelationship",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Follower, nil
+		return ec.resolvers.UserRelationship().Follower(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6566,13 +6580,13 @@ func (ec *executionContext) _UserRelationship_followee(ctx context.Context, fiel
 		Object:   "UserRelationship",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Followee, nil
+		return ec.resolvers.UserRelationship().Followee(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6607,6 +6621,40 @@ func (ec *executionContext) _UserRelationship_createdAt(ctx context.Context, fie
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserRelationship_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.UserRelationship) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserRelationship",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -9858,22 +9906,45 @@ func (ec *executionContext) _UserRelationship(ctx context.Context, sel ast.Selec
 		case "id":
 			out.Values[i] = ec._UserRelationship_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "follower":
-			out.Values[i] = ec._UserRelationship_follower(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserRelationship_follower(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "followee":
-			out.Values[i] = ec._UserRelationship_followee(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserRelationship_followee(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "createdAt":
 			out.Values[i] = ec._UserRelationship_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._UserRelationship_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))

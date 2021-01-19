@@ -158,13 +158,6 @@ type UserInteractionsInput struct {
 	ReadState *ReadState `json:"readState"`
 }
 
-type UserRelationship struct {
-	ID        int64     `json:"id"`
-	Follower  *User     `json:"follower"`
-	Followee  *User     `json:"followee"`
-	CreatedAt time.Time `json:"createdAt"`
-}
-
 type UserRelationshipInput struct {
 	FollowerID int64 `json:"followerID"`
 	FolloweeID int64 `json:"followeeID"`

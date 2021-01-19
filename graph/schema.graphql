@@ -157,6 +157,7 @@ type UserRelationship {
   follower: User!
   followee: User!
   createdAt: Time!
+  updatedAt: Time!
 }
 
 input UserRelationshipInput {
