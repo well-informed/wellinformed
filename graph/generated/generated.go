@@ -46,6 +46,7 @@ type ResolverRoot interface {
 	SrcRSSFeed() SrcRSSFeedResolver
 	User() UserResolver
 	UserFeed() UserFeedResolver
+	UserRelationship() UserRelationshipResolver
 	UserSubscription() UserSubscriptionResolver
 }
 
@@ -155,11 +156,13 @@ type ComplexityRoot struct {
 		AddSrcRSSFeed        func(childComplexity int, feedLink string, targetFeedID int64) int
 		AddUserFeed          func(childComplexity int, input model.AddUserFeedInput) int
 		DeleteSubscription   func(childComplexity int, srcRssfeedID int64) int
+		FollowUser           func(childComplexity int, input model.UserRelationshipInput) int
 		Login                func(childComplexity int, input model.LoginInput) int
 		Register             func(childComplexity int, input model.RegisterInput) int
 		SaveEngine           func(childComplexity int, engine model.EngineInput) int
 		SaveInteraction      func(childComplexity int, input *model.InteractionInput) int
 		SwitchActiveUserFeed func(childComplexity int, feedID int64) int
+		UnfollowUser         func(childComplexity int, input model.UserRelationshipInput) int
 	}
 
 	Query struct {
@@ -211,6 +214,8 @@ type ComplexityRoot struct {
 		Feed          func(childComplexity int) int
 		Feeds         func(childComplexity int) int
 		Firstname     func(childComplexity int) int
+		Followers     func(childComplexity int) int
+		Follows       func(childComplexity int) int
 		ID            func(childComplexity int) int
 		Interactions  func(childComplexity int, readState *model.ReadState, input model.InteractionConnectionInput) int
 		Lastname      func(childComplexity int) int
@@ -231,6 +236,14 @@ type ComplexityRoot struct {
 		Title         func(childComplexity int) int
 		User          func(childComplexity int) int
 		UserID        func(childComplexity int) int
+	}
+
+	UserRelationship struct {
+		CreatedAt func(childComplexity int) int
+		Followee  func(childComplexity int) int
+		Follower  func(childComplexity int) int
+		ID        func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
 	}
 
 	UserSubscription struct {
@@ -282,6 +295,8 @@ type MutationResolver interface {
 	SaveInteraction(ctx context.Context, input *model.InteractionInput) (*model.ContentItem, error)
 	SaveEngine(ctx context.Context, engine model.EngineInput) (*model.Engine, error)
 	SwitchActiveUserFeed(ctx context.Context, feedID int64) (*model.User, error)
+	FollowUser(ctx context.Context, input model.UserRelationshipInput) (*model.UserRelationship, error)
+	UnfollowUser(ctx context.Context, input model.UserRelationshipInput) (*model.DeleteResponse, error)
 }
 type QueryResolver interface {
 	SrcRSSFeed(ctx context.Context, input *model.SrcRSSFeedInput) (*model.SrcRSSFeed, error)
@@ -305,6 +320,8 @@ type UserResolver interface {
 
 	Subscriptions(ctx context.Context, obj *model.User, input *model.UserSubscriptionConnectionInput) (*model.UserSubscriptionConnection, error)
 	Interactions(ctx context.Context, obj *model.User, readState *model.ReadState, input model.InteractionConnectionInput) (*model.InteractionConnection, error)
+	Follows(ctx context.Context, obj *model.User) ([]*model.User, error)
+	Followers(ctx context.Context, obj *model.User) ([]*model.User, error)
 }
 type UserFeedResolver interface {
 	User(ctx context.Context, obj *model.UserFeed) (*model.User, error)
@@ -313,6 +330,10 @@ type UserFeedResolver interface {
 	Subscriptions(ctx context.Context, obj *model.UserFeed) ([]*model.FeedSubscription, error)
 	Engine(ctx context.Context, obj *model.UserFeed) (*model.Engine, error)
 	IsActive(ctx context.Context, obj *model.UserFeed) (bool, error)
+}
+type UserRelationshipResolver interface {
+	Follower(ctx context.Context, obj *model.UserRelationship) (*model.User, error)
+	Followee(ctx context.Context, obj *model.UserRelationship) (*model.User, error)
 }
 type UserSubscriptionResolver interface {
 	User(ctx context.Context, obj *model.UserSubscription) (*model.User, error)
@@ -793,6 +814,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.DeleteSubscription(childComplexity, args["srcRSSFeedID"].(int64)), true
 
+	case "Mutation.followUser":
+		if e.complexity.Mutation.FollowUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_followUser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.FollowUser(childComplexity, args["input"].(model.UserRelationshipInput)), true
+
 	case "Mutation.login":
 		if e.complexity.Mutation.Login == nil {
 			break
@@ -852,6 +885,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.SwitchActiveUserFeed(childComplexity, args["feedID"].(int64)), true
+
+	case "Mutation.unfollowUser":
+		if e.complexity.Mutation.UnfollowUser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_unfollowUser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UnfollowUser(childComplexity, args["input"].(model.UserRelationshipInput)), true
 
 	case "Query.engines":
 		if e.complexity.Query.Engines == nil {
@@ -1114,6 +1159,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.User.Firstname(childComplexity), true
 
+	case "User.followers":
+		if e.complexity.User.Followers == nil {
+			break
+		}
+
+		return e.complexity.User.Followers(childComplexity), true
+
+	case "User.follows":
+		if e.complexity.User.Follows == nil {
+			break
+		}
+
+		return e.complexity.User.Follows(childComplexity), true
+
 	case "User.id":
 		if e.complexity.User.ID == nil {
 			break
@@ -1252,6 +1311,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.UserFeed.UserID(childComplexity), true
+
+	case "UserRelationship.createdAt":
+		if e.complexity.UserRelationship.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.UserRelationship.CreatedAt(childComplexity), true
+
+	case "UserRelationship.followee":
+		if e.complexity.UserRelationship.Followee == nil {
+			break
+		}
+
+		return e.complexity.UserRelationship.Followee(childComplexity), true
+
+	case "UserRelationship.follower":
+		if e.complexity.UserRelationship.Follower == nil {
+			break
+		}
+
+		return e.complexity.UserRelationship.Follower(childComplexity), true
+
+	case "UserRelationship.id":
+		if e.complexity.UserRelationship.ID == nil {
+			break
+		}
+
+		return e.complexity.UserRelationship.ID(childComplexity), true
+
+	case "UserRelationship.updatedAt":
+		if e.complexity.UserRelationship.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.UserRelationship.UpdatedAt(childComplexity), true
 
 	case "UserSubscription.createdAt":
 		if e.complexity.UserSubscription.CreatedAt == nil {
@@ -1523,6 +1617,8 @@ type User {
   updatedAt: Time!
   subscriptions(input: UserSubscriptionConnectionInput): UserSubscriptionConnection!
   interactions(readState: ReadState, input: InteractionConnectionInput!): InteractionConnection!
+  follows: [User!]!
+  followers: [User!]!
 }
 
 enum sortType {
@@ -1551,6 +1647,19 @@ enum ReadState {
   savedForLater
   partiallyRead
   unread
+}
+
+type UserRelationship {
+  id: ID!
+  follower: User!
+  followee: User!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+input UserRelationshipInput {
+  followerID: ID!
+  followeeID: ID!
 }
 
 input InteractionInput {
@@ -1715,6 +1824,8 @@ type Mutation {
   saveInteraction(input: InteractionInput): ContentItem!
   saveEngine(engine: EngineInput!): Engine!
   switchActiveUserFeed(feedID: ID!): User!
+  followUser(input: UserRelationshipInput!): UserRelationship!
+  unfollowUser(input: UserRelationshipInput!): DeleteResponse!
 }
 `, BuiltIn: false},
 }
@@ -1802,6 +1913,20 @@ func (ec *executionContext) field_Mutation_deleteSubscription_args(ctx context.C
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_followUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.UserRelationshipInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNUserRelationshipInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserRelationshipInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1869,6 +1994,20 @@ func (ec *executionContext) field_Mutation_switchActiveUserFeed_args(ctx context
 		}
 	}
 	args["feedID"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_unfollowUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.UserRelationshipInput
+	if tmp, ok := rawArgs["input"]; ok {
+		arg0, err = ec.unmarshalNUserRelationshipInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserRelationshipInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -4388,6 +4527,88 @@ func (ec *executionContext) _Mutation_switchActiveUserFeed(ctx context.Context, 
 	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_followUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_followUser_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().FollowUser(rctx, args["input"].(model.UserRelationshipInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.UserRelationship)
+	fc.Result = res
+	return ec.marshalNUserRelationship2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserRelationship(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_unfollowUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_unfollowUser_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UnfollowUser(rctx, args["input"].(model.UserRelationshipInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.DeleteResponse)
+	fc.Result = res
+	return ec.marshalNDeleteResponse2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐDeleteResponse(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_srcRSSFeed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -5902,6 +6123,74 @@ func (ec *executionContext) _User_interactions(ctx context.Context, field graphq
 	return ec.marshalNInteractionConnection2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐInteractionConnection(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _User_follows(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().Follows(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _User_followers(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "User",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.User().Followers(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _UserFeed_id(ctx context.Context, field graphql.CollectedField, obj *model.UserFeed) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -6210,6 +6499,176 @@ func (ec *executionContext) _UserFeed_isActive(ctx context.Context, field graphq
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserRelationship_id(ctx context.Context, field graphql.CollectedField, obj *model.UserRelationship) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserRelationship",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNID2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserRelationship_follower(ctx context.Context, field graphql.CollectedField, obj *model.UserRelationship) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserRelationship",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserRelationship().Follower(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserRelationship_followee(ctx context.Context, field graphql.CollectedField, obj *model.UserRelationship) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserRelationship",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.UserRelationship().Followee(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserRelationship_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.UserRelationship) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserRelationship",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CreatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _UserRelationship_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.UserRelationship) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "UserRelationship",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(time.Time)
+	fc.Result = res
+	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UserSubscription_id(ctx context.Context, field graphql.CollectedField, obj *model.UserSubscription) (ret graphql.Marshaler) {
@@ -8059,6 +8518,30 @@ func (ec *executionContext) unmarshalInputUserInteractionsInput(ctx context.Cont
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUserRelationshipInput(ctx context.Context, obj interface{}) (model.UserRelationshipInput, error) {
+	var it model.UserRelationshipInput
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "followerID":
+			var err error
+			it.FollowerID, err = ec.unmarshalNID2int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "followeeID":
+			var err error
+			it.FolloweeID, err = ec.unmarshalNID2int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUserSubscriptionConnectionInput(ctx context.Context, obj interface{}) (model.UserSubscriptionConnectionInput, error) {
 	var it model.UserSubscriptionConnectionInput
 	var asMap = obj.(map[string]interface{})
@@ -8774,6 +9257,16 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "followUser":
+			out.Values[i] = ec._Mutation_followUser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "unfollowUser":
+			out.Values[i] = ec._Mutation_unfollowUser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9251,6 +9744,34 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 				}
 				return res
 			})
+		case "follows":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_follows(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "followers":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_followers(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9360,6 +9881,71 @@ func (ec *executionContext) _UserFeed(ctx context.Context, sel ast.SelectionSet,
 				}
 				return res
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var userRelationshipImplementors = []string{"UserRelationship"}
+
+func (ec *executionContext) _UserRelationship(ctx context.Context, sel ast.SelectionSet, obj *model.UserRelationship) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userRelationshipImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UserRelationship")
+		case "id":
+			out.Values[i] = ec._UserRelationship_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "follower":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserRelationship_follower(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "followee":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UserRelationship_followee(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "createdAt":
+			out.Values[i] = ec._UserRelationship_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._UserRelationship_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -10330,6 +10916,43 @@ func (ec *executionContext) marshalNUser2githubᚗcomᚋwellᚑinformedᚋwellin
 	return ec._User(ctx, sel, &v)
 }
 
+func (ec *executionContext) marshalNUser2ᚕᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.User) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -10389,6 +11012,24 @@ func (ec *executionContext) marshalNUserFeed2ᚖgithubᚗcomᚋwellᚑinformed�
 		return graphql.Null
 	}
 	return ec._UserFeed(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUserRelationship2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserRelationship(ctx context.Context, sel ast.SelectionSet, v model.UserRelationship) graphql.Marshaler {
+	return ec._UserRelationship(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUserRelationship2ᚖgithubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserRelationship(ctx context.Context, sel ast.SelectionSet, v *model.UserRelationship) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._UserRelationship(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNUserRelationshipInput2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserRelationshipInput(ctx context.Context, v interface{}) (model.UserRelationshipInput, error) {
+	return ec.unmarshalInputUserRelationshipInput(ctx, v)
 }
 
 func (ec *executionContext) marshalNUserSubscription2githubᚗcomᚋwellᚑinformedᚋwellinformedᚋgraphᚋmodelᚐUserSubscription(ctx context.Context, sel ast.SelectionSet, v model.UserSubscription) graphql.Marshaler {

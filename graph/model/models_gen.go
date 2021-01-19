@@ -158,6 +158,11 @@ type UserInteractionsInput struct {
 	ReadState *ReadState `json:"readState"`
 }
 
+type UserRelationshipInput struct {
+	FollowerID int64 `json:"followerID"`
+	FolloweeID int64 `json:"followeeID"`
+}
+
 type UserSubscriptionConnection struct {
 	Edges    []*UserSubscriptionEdge   `json:"edges"`
 	PageInfo *UserSubscriptionPageInfo `json:"pageInfo"`
